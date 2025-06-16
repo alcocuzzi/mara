@@ -3,7 +3,7 @@
 
 FROM ubuntu:noble AS base
 ENV UID="999"
-ENV GID="999"
+ENV GID="991"
 ENV USER="mara"
 ENV GROUP="mara"
 ENV OS_TOOLS="wget curl git python3 python3-pip sudo tar unzip less jq vim fish gpg netcat-traditional cookiecutter"
