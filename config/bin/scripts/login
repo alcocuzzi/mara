@@ -1,0 +1,235 @@
+#!/usr/bin/env python3
+"""
+Mara utility to load AWS long credentials (Access Key and Secrets Access Key). 
+
+Usage:
+   login [options]
+
+Options:
+  -s, --secs=secs         The duration in seconds the credentials should remain valid [default: 10800]
+  -h, --help              Show this help message and exit
+  --debug                 Show more verbose logging
+"""
+
+from botocore.exceptions import ClientError, ParamValidationError
+# Library to exit when facing errors
+from sys import exit
+# Library to set log levels
+from logging import basicConfig, getLogger, INFO, WARNING
+from rich.console import Console
+from rich.logging import RichHandler
+# Library to have command line options
+import docopt
+import configparser
+from boto3 import client
+from subprocess import run, check_output, CalledProcessError, DEVNULL
+from os import environ
+
+# Logging configuration
+FORMAT = "%(message)s"
+basicConfig(
+    format=FORMAT, datefmt="[%X]", handlers=[RichHandler()], level=INFO,
+)
+_log = getLogger("rich")
+console = Console()
+
+# Suppress boto3/botocore logging to avoid message `Found credentials in shared credentials file: ~/.aws/credentials`
+getLogger('boto3').setLevel(WARNING)
+getLogger('botocore').setLevel(WARNING)
+
+
+def login():
+  home_dir = environ['HOME']
+  try:
+    output = check_output(["ls", "/tmp/aws"], stderr=DEVNULL, universal_newlines=True)
+    
+  except CalledProcessError:
+    _log.info("No AWS profiles have been found. Let's create a profile for you.\n")
+    #valid_outputs = ["json", "yaml", "yaml-stream", "text", "table"]
+    aws_profile_name = input("AWS Profile Name: ")
+    aws_access_key_id = input(f"AWS Access Key ID [{aws_profile_name}]: ")
+    aws_secret_access_key = input(f"AWS Secret Access Key [{aws_profile_name}]: ")
+    aws_mfa_arn = input(f"AWS Multi-Factor Authenticator ARN [{aws_profile_name}]: ")
+    aws_region = input(f"AWS Region Name [{aws_profile_name}]: ")
+    aws_output = input(f"AWS Output Format [{aws_profile_name}]: ")
+  
+  # Creating profile structure
+    run(["mkdir", "-p", f"/tmp/aws/{aws_profile_name}/"])
+    run(["touch", f"/tmp/aws/{aws_profile_name}/credentials"])
+    run(["touch", f"/tmp/aws/{aws_profile_name}/config"])
+    
+  # Set the credentials
+    credentials_config = configparser.ConfigParser()
+    credentials_config.read(f"/tmp/aws/{aws_profile_name}/credentials")
+    if not credentials_config.has_section("default"):
+      credentials_config.add_section("default")
+    
+    credentials_config.set("default", "aws_access_key_id", aws_access_key_id)
+    credentials_config.set("default", "aws_secret_access_key", aws_secret_access_key)
+    with open(f"/tmp/aws/{aws_profile_name}/credentials", "w") as credentials_file:
+      credentials_config.write(credentials_file)
+    
+  # Set the region and output
+    config = configparser.ConfigParser()
+    config.read(f"/tmp/aws/{aws_profile_name}/config")
+    if not config.has_section("default"):
+      config.add_section("default")
+    
+    config.set("default", "region", aws_region)
+    config.set("default", "output", aws_output)
+    config.set("default", "mfa_serial", aws_mfa_arn)
+    with open(f"/tmp/aws/{aws_profile_name}/config", "w") as config_file:
+      config.write(config_file)
+  
+    _log.info("AWS_ACCESS_KEY: %s", aws_access_key_id[:20])
+    _log.info("AWS_SECRET_ACCESS_KEY: %s", aws_secret_access_key[:20])
+    if aws_mfa_arn:
+      _log.info("AWS_MFA_ARN: %s", aws_mfa_arn[:20])
+    _log.info("AWS_REGION: %s", aws_region[:20])
+    _log.info("AWS_OUTPUT: %s", aws_output[:20])
+    output = check_output(["ls", "/tmp/aws"], stderr=DEVNULL, universal_newlines=True)
+
+  folders = output.split()
+  folders.sort()
+  print("\n")
+  print("╔════════════════════════════════════════════════╗")
+  print("║     ↓ ↓     Available AWS Profiles     ↓ ↓     ║")
+  print("╚════════════════════════════════════════════════╝\n")
+    
+  for i, folder in enumerate(folders, 1):
+    print(f"{i} ➦ {folder}")
+
+  selected_index = input("\nPlease enter the number of the profile you want to use: ") 
+  
+  try:
+    selected_index = int(selected_index)
+
+    # Check if the selected index is valid
+    if 1 <= selected_index <= len(folders):
+      selected_folder = folders[selected_index - 1]
+      selected_folder_path = f"/tmp/aws/{selected_folder}"
+      _log.info("Profile selected: %s", selected_folder_path)
+    else:
+      _log.warning("Invalid selection. Please choose a valid number.")
+      exit(0)
+  except ValueError:
+    _log.warning("Invalid input. Please enter a number.")
+    exit(0)
+  
+  credentials_set = configparser.ConfigParser()
+  credentials_set.read(f"{selected_folder_path}/credentials")
+  with open(f"{home_dir}/.aws/credentials", 'w') as configfile:
+    credentials_set.write(configfile)
+    
+  mfa_and_region_set = configparser.ConfigParser()
+  mfa_and_region_set.read(f"{selected_folder_path}/config")
+  mfa_serial =  mfa_and_region_set.get("default", "mfa_serial")
+  with open(f"{home_dir}/.aws/config", "w") as configfile:
+    mfa_and_region_set.write(configfile)
+
+  try:
+    sts_client = client("sts")
+  
+  except ClientError as e:
+    _log.error(e)
+    exit(1)
+  
+  if mfa_serial:
+    try:
+      mfa_token = input("Enter MFA code: ")
+      response = sts_client.get_session_token(
+        DurationSeconds=int(options["--secs"]),
+        SerialNumber=mfa_serial,
+        TokenCode=mfa_token
+      )
+    except ParamValidationError as e:
+      _log.error(e)
+      exit(1)
+      
+  else:
+    try:
+      response = sts_client.get_session_token(
+        DurationSeconds=int(options["--secs"]),
+      )
+    except ParamValidationError as e:
+      _log.error(e)
+      exit(1)
+    
+  access_key_id = response['Credentials']['AccessKeyId']
+  secret_access_key = response['Credentials']['SecretAccessKey']
+  session_token = response['Credentials']['SessionToken']
+  #token_expiration = response['Credentials']['Expiration']
+ 
+  credentials_temp = configparser.ConfigParser()
+  credentials_temp.read(f"{home_dir}/.aws/credentials")
+  credentials_temp.set("default", "aws_access_key_id", access_key_id)
+  credentials_temp.set("default", "aws_secret_access_key", secret_access_key)
+  credentials_temp.set("default", "aws_session_token", session_token)
+  with open(f'{home_dir}/.aws/credentials', 'w') as configfile:
+    credentials_temp.write(configfile)
+
+### Setting current account information in the prompt
+  try:
+    account_info = client('sts').get_caller_identity()
+    identity = account_info['Arn'].split('/')[-1]
+    acc_number = account_info["Account"]
+ 
+    try:
+      acc_alias = client('iam').list_account_aliases()['AccountAliases'][0]
+     
+    except IndexError:
+      acc_alias = ""
+      _log.info("This account does not have an alias. Let's use the account number instead")
+
+  except ClientError as e:
+    _log.error(e)
+    exit(1)
+  
+  try:
+    remove_acc_number = run("printenv | grep 'mara_acc_number'", shell=True, executable="/usr/bin/fish", check=True, capture_output=True).stdout.strip()
+
+    if remove_acc_number:
+      run("set -e mara_acc_number", shell=True, executable="/usr/bin/fish", check=True)
+
+  except CalledProcessError:
+    pass
+   
+  try:
+    remove_acc_alias = run("printenv | grep 'mara_acc_alias'", shell=True, executable="/usr/bin/fish", check=True, capture_output=True).stdout.strip()
+      
+    if remove_acc_alias:
+      run("set -e mara_acc_alias", shell=True, executable="/usr/bin/fish", check=True)
+   
+  except CalledProcessError:
+    pass
+
+
+  try:  
+    run("set -Ux mara_region " + aws_region, shell=True, executable="/usr/bin/fish", check=True)
+  
+  except UnboundLocalError:
+    aws_region = run(f"grep 'region' {home_dir}/.aws/config | cut -d' ' -f3", shell=True, executable="/usr/bin/fish", text=True, capture_output=True).stdout.strip()
+    run("set -Ux mara_region " + aws_region, shell=True, executable="/usr/bin/fish", check=True)
+  
+  run("set -Ux mara_identity " + identity, shell=True, executable="/usr/bin/fish", check=True)   
+  if acc_alias:
+    run("set -Ux mara_acc_alias " + acc_alias, shell=True, executable="/usr/bin/fish", check=True)
+  
+  else:  
+    run("set -Ux mara_acc_number " + acc_number, shell=True, executable="/usr/bin/fish", check=True)
+      
+# Main function
+def main(options):
+   if options["--debug"]:
+      for key, value in options.items():
+         _log.debug("command-line options: {}: {}".format(key, value))
+
+   login()
+    
+if __name__ == "__main__":
+   try:
+      options = docopt.docopt(__doc__)
+      main(options)
+
+   except docopt.DocoptExit:
+      exit(__doc__)

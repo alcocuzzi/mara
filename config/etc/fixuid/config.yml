@@ -1,0 +1,5 @@
+user: mara
+group: mara
+paths:
+  - /home/mara
+  - /usr/local/bin

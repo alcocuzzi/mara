@@ -1,0 +1,66 @@
+#!/usr/bin/env python3
+"""
+Mara utility to switch AWS regions.
+
+Usage:
+   region <region_name> [options]
+   region --help
+
+Options:
+  -h, --help              Show this help message and exit
+  --debug                 Show more verbose logging
+"""
+
+from sys import exit
+# Library to set log levels
+from logging import basicConfig, getLogger, INFO, WARNING
+from rich.console import Console
+from rich.logging import RichHandler
+# Library to have command line options
+import docopt
+import configparser
+from subprocess import run
+from os import environ
+
+# Logging configuration
+FORMAT = "%(message)s"
+basicConfig(
+    format=FORMAT, datefmt="[%X]", handlers=[RichHandler()], level=INFO,
+)
+_log = getLogger("rich")
+console = Console()
+
+# Suppress boto3/botocore logging to avoid message `Found credentials in shared credentials file: ~/.aws/credentials`
+getLogger('boto3').setLevel(WARNING)
+getLogger('botocore').setLevel(WARNING)
+
+
+def region(arguments):
+  home_dir = environ['HOME']
+  try:
+    open(f"{home_dir}/.aws/config")
+  
+  except IOError:
+    _log.error("This command requires you to login on AWS first")
+    exit(0)
+    
+  config = configparser.ConfigParser()  
+  with open(f"{home_dir}/.aws/config", "w") as config_file:
+    config.add_section("default")
+    config.set("default", "region", arguments["<region_name>"])
+    config.set("default", "output", "json")
+    config.write(config_file)
+  
+  run("set -Ux mara_region " + arguments["<region_name>"], shell=True, executable="/usr/bin/fish", check=True)
+
+def main(arguments):
+   if arguments["<region_name>"]:
+      region(arguments)
+ 
+if __name__ == "__main__":
+   try:
+      arguments = docopt.docopt(__doc__)
+      main(arguments)
+
+   except docopt.DocoptExit:
+      exit(__doc__)

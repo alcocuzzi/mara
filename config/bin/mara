@@ -1,0 +1,45 @@
+#!/usr/bin/env python3
+import sys
+from os import path
+import logging
+import subprocess
+from rich.logging import RichHandler
+
+# Logging configuration
+FORMAT = "%(message)s"
+logging.basicConfig(
+    level="NOTSET", format=FORMAT, datefmt="[%X]", handlers=[RichHandler()]
+)
+_log = logging.getLogger("rich")
+
+try:
+    # argv[0] is always the filename/script executed, and sys.argv[1] is the script name.
+    script_name = sys.argv[1]
+    script_args = sys.argv[2:]  # Extract additional arguments
+except IndexError:
+    available_commands = subprocess.run(['ls', '/app/scripts/'], capture_output=True, text=True)
+    print("\033[1;35m╔═════════════════════════════════════════════════╗")
+    print("\033[1;35m║    ↓ ↓     Available Mara Commands     ↓ ↓      ║")
+    print("\033[1;35m╚═════════════════════════════════════════════════╝\n")
+    
+    for i, command in enumerate(available_commands.stdout.splitlines(), 1):
+      print(f"\033[1;32m{i} ➦ {command}")
+    sys.exit(1)
+
+try:
+    # Check if the script file exists
+    script_path = path.join("/app/scripts", script_name)
+
+    if path.isfile(script_path):
+        args = [sys.executable, script_path] + script_args  # Include additional arguments
+        subprocess.run(args, check=True)
+
+    else:
+        _log.error(f"Script '{script_name}' not found.")
+
+except subprocess.CalledProcessError as e:
+    _log.error(f"Script '{script_name}' execution failed with error code {e.returncode}")
+    sys.exit(1)
+except Exception as e:
+    _log.error(f"An error occurred: {str(e)}")
+    sys.exit(1)

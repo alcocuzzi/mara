@@ -1,0 +1,266 @@
+#!/usr/bin/env python3
+"""
+Utility to execute commands on ECS tasks for a specific service.
+
+Usage:
+  ecs-execute-command --cluster=<cluster> --service=<service> [--command=<command>]
+
+Options:
+  -c, --cluster=<cluster>    The ECS cluster name
+  -s, --service=<service>    The ECS service name
+  -C, --command=<command>  The command to execute on the container [default: /bin/sh]
+  -h, --help                 Show this help message and exit
+"""
+
+from boto3 import client
+import curses
+import docopt
+from logging import basicConfig, getLogger, INFO, WARNING
+from botocore.exceptions import ClientError, NoRegionError
+from sys import exit
+from rich.console import Console
+from rich.logging import RichHandler
+from rich.table import Table
+from subprocess import run
+
+# Logging configuration
+FORMAT = "%(message)s"
+basicConfig(
+    format=FORMAT, datefmt="[%X]", handlers=[RichHandler()], level=INFO,
+)
+_log = getLogger("rich")
+console = Console()
+
+# Suppress boto3/botocore logging to avoid message `Found credentials in shared credentials file: ~/.aws/credentials`
+getLogger('boto3').setLevel(WARNING)
+getLogger('botocore').setLevel(WARNING)
+
+def get_tasks(cluster, service):
+    """Get all tasks for a specific service in a cluster."""
+    try:
+        ecs = client('ecs')
+
+        # List tasks for the service
+        response = ecs.list_tasks(
+            cluster=cluster,
+            serviceName=service,
+        )
+        
+        task_arns = response.get('taskArns', [])
+        
+        if not task_arns:
+            _log.error(f"No tasks found for service '{service}' in cluster '{cluster}'")
+            return []
+        
+        # Describe tasks to get more details
+        tasks_details = ecs.describe_tasks(
+            cluster=cluster,
+            tasks=task_arns
+        )
+        
+        return tasks_details.get('tasks', [])
+        
+    except NoRegionError:
+        _log.error("This command requires you to login on AWS first")
+        exit(1)
+        
+    except ClientError as e:
+        _log.error(e)
+        exit(1)
+
+def format_task_info(tasks):
+    """Format task information for display."""
+    task_info = []
+    
+    for task in tasks:
+        task_arn = task['taskArn']
+        task_definition_arn = task['taskDefinitionArn']
+        
+        # Extract task definition name and version
+        definition_parts = task_definition_arn.split('/')[-1].split(':')
+        task_definition_name = definition_parts[0]
+        task_definition_version = definition_parts[1] if len(definition_parts) > 1 else "unknown"
+        
+        # Get health status
+        health_status = task.get('healthStatus', 'UNKNOWN')
+        
+        # Get container names
+        containers = [container['name'] for container in task.get('containers', [])]
+        
+        # Add to our list
+        task_info.append({
+            'arn': task_arn,
+            'definition': task_definition_name,
+            'version': task_definition_version,
+            'health': health_status,
+            'containers': containers
+        })
+    
+    return task_info
+
+def display_tasks_interactive(tasks_info, cluster):
+    """Display tasks in an interactive curses UI."""
+    if not tasks_info:
+        _log.error("No tasks found!")
+        return None
+    
+    def curses_main(stdscr):
+        # Clear screen
+        stdscr.clear()
+        curses.curs_set(0)  # Hide cursor
+        
+        # Get screen dimensions
+        max_y, max_x = stdscr.getmaxyx()
+        
+        # Set up colors
+        curses.start_color()
+        curses.init_pair(1, curses.COLOR_WHITE, curses.COLOR_BLUE)  # Selected item
+        curses.init_pair(2, curses.COLOR_GREEN, curses.COLOR_BLACK)  # Healthy
+        curses.init_pair(3, curses.COLOR_YELLOW, curses.COLOR_BLACK)  # Warning
+        curses.init_pair(4, curses.COLOR_RED, curses.COLOR_BLACK)  # Unhealthy
+        
+        # Current selection
+        current_selection = 0
+        
+        # Loop until Enter key is pressed
+        while True:
+            stdscr.clear()
+            
+            # Display header
+            header = f"Tasks for cluster: {cluster} "
+            stdscr.addstr(0, (max_x - len(header)) // 2, header, curses.A_BOLD)
+            
+            # Column headers
+            headers = ["#", "Task Definition", "Version", "Health Status"]
+            header_line = " | ".join(headers)
+            stdscr.addstr(2, 2, header_line, curses.A_BOLD)
+            
+            # Divider
+            stdscr.addstr(3, 2, "-" * (len(header_line) + 10))
+            
+            # Display tasks
+            for i, task in enumerate(tasks_info):
+                # Determine color for health status
+                if task['health'] == 'HEALTHY':
+                    health_color = curses.color_pair(2)
+                elif task['health'] == 'UNHEALTHY':
+                    health_color = curses.color_pair(4)
+                else:
+                    health_color = curses.color_pair(3)
+                
+                # Check if this is the selected item
+                if i == current_selection:
+                    attr = curses.color_pair(1)
+                else:
+                    attr = curses.A_NORMAL
+                
+                # Format the line
+                line = f"{i+1:2} | {task['definition']:<20} | {task['version']:<7} | "
+                
+                # Print the line
+                y_pos = 4 + i
+                if y_pos < max_y - 3:  # Ensure we don't go off-screen
+                    stdscr.addstr(y_pos, 2, line, attr)
+                    # Print health status with its own color
+                    if i == current_selection:
+                        stdscr.addstr(y_pos, 2 + len(line), task['health'], attr)
+                    else:
+                        stdscr.addstr(y_pos, 2 + len(line), task['health'], health_color)
+            
+            # Instructions at the bottom
+            instructions = "Use UP/DOWN arrows to select, ENTER to execute command, q to quit"
+            if max_y - 2 > 0:  # Ensure we don't go off-screen
+                stdscr.addstr(max_y - 2, (max_x - len(instructions)) // 2, instructions)
+            
+            # Get user input
+            key = stdscr.getch()
+            
+            # Process key
+            if key == curses.KEY_UP and current_selection > 0:
+                current_selection -= 1
+            elif key == curses.KEY_DOWN and current_selection < len(tasks_info) - 1:
+                current_selection += 1
+            elif key == 10:  # Enter key
+                return current_selection
+            elif key == ord('q'):  # Quit
+                return None
+    
+    try:
+        selected_idx = curses.wrapper(curses_main)
+        if selected_idx is not None:
+            return tasks_info[selected_idx]
+        return None
+    except Exception as e:
+        _log.error(f"Error in UI: {e}")
+        return None
+
+def execute_command(cluster, task_arn, container, command):
+    """Execute the ECS execute-command."""
+    command = f"aws ecs execute-command --cluster \"{cluster}\" --task {task_arn} --container \"{container}\" --interactive --command \"{command}\""
+    
+    _log.info(f"Executing: {command}")
+    
+    try:
+        run(command, shell=True, check=True)
+    except Exception as e:
+        _log.error({e})
+
+def choose_container(containers):
+    """Let user choose a container if there are multiple."""
+    if len(containers) == 1:
+        return containers[0]
+    
+    _log.info("Choose a container:")
+    table = Table(show_header=True)
+    table.add_column("#", style="dim")
+    table.add_column("Container Name")
+    
+    for i, container in enumerate(containers):
+        table.add_row(str(i+1), container)
+    
+    console.print(table)
+    
+    choice = input("Enter container number: ")
+    try:
+        idx = int(choice) - 1
+        if 0 <= idx < len(containers):
+            return containers[idx]
+        else:
+            _log.warning("Invalid selection, using first container")
+            return containers[0]
+    except ValueError:
+        _log.warning("Invalid input, using first container")
+        return containers[0]
+
+def main(options):
+    """Main function to run the script."""
+    cluster = options["--cluster"]
+    service = options["--service"]
+    command = options["--command"]
+    
+    _log.info(f"Retrieving tasks for service {service} in the cluster {cluster}")
+    
+    # Get tasks
+    tasks = get_tasks(cluster, service)
+    
+    # Format task info
+    tasks_info = format_task_info(tasks)
+    
+    # Display interactive UI
+    selected_task = display_tasks_interactive(tasks_info, cluster)
+    
+    if selected_task:
+        # Choose container
+        container = choose_container(selected_task['containers'])
+        
+        # Execute command
+        execute_command(cluster, selected_task['arn'], container, command)
+    else:
+        _log.warning("Operation cancelled")
+
+if __name__ == "__main__":
+    try:
+        options = docopt.docopt(__doc__)
+        main(options)
+    except docopt.DocoptExit:
+        print(__doc__)

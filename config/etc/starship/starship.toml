@@ -1,0 +1,70 @@
+format = """
+[mara](#ebfaeb)\
+[ ➦ ](#ebfaeb)\
+$time\
+$directory\
+$git_branch\
+$git_state\
+$git_status\
+$env_var\
+$character"""
+
+[directory]
+style = "#adebad"
+format = "[ $path ]($style)"
+truncation_length = 3
+truncation_symbol = "…/"
+
+[character]
+success_symbol = "[❯](bold green)"
+error_symbol = "[❯](red)"
+vimcmd_symbol = "[❮](green)"
+
+[git_branch]
+format = "[➦ $branch]($style)"
+style = "#33ff33"
+
+[git_status]
+format = "[[(*$conflicted$untracked$modified$staged$renamed$deleted)](#ff0066) ($ahead_behind$stashed)]($style)"
+style = "cyan"
+conflicted = "​"
+untracked = "​"
+modified = "​"
+staged = "​"
+renamed = "​"
+deleted = "​"
+stashed = "≡"
+
+[git_state]
+format = '\([$state( $progress_current/$progress_total)]($style)\) '
+style = "bright-black"
+
+[time]
+disabled = false
+time_format = "%R" # Hour:Minute Format
+style = "#d6f5d6"
+format = '[ $time ]($style)'
+
+[env_var.mara_acc_alias]
+variable = "mara_acc_alias"
+style = "#2eb82e"
+symbol = '➦'
+format = '[[$symbol $env_value ](#2eb82e)]($style)'
+
+[env_var.mara_acc_number]
+variable = "mara_acc_number"
+style = "#2eb82e"
+symbol = '➦'
+format = '[[$symbol $env_value ](#2eb82e)]($style)'
+
+[env_var.mara_identity]
+variable = "mara_identity"
+style = "#2eb82e"
+symbol = '|'
+format = '[[$symbol $env_value ](#2eb82e)]($style)'
+
+[env_var.mara_region]
+variable = "mara_region"
+style = "#2eb82e"
+symbol = ''
+format = '[[| $env_value](#2eb82e) ]($style)'
