@@ -31,7 +31,7 @@ jobs:
           context: .
           file: ./Dockerfile
           platforms: linux/amd64
-          push: true
+          push: false
           tags: thecoderepublic/mara:amd64
 
       # Build arm64 image
@@ -42,7 +42,7 @@ jobs:
           context: .
           file: ./Dockerfile_arm64
           platforms: linux/arm64
-          push: true
+          push: false
           tags: thecoderepublic/mara:arm64
 
       # Create and push multi-arch manifest for 'latest'
