@@ -10,12 +10,12 @@ Seamlessly integrated with many open source tools and with a built-in Python scr
 
 ### Step 2: Pull Mara image
 ```console
-docker pull thecoderepublic/mara:arm64
+docker pull thecoderepublic/mara:latest
 ```
 
 ### Step 3: Run Mara
 ```console
-docker run --rm -it thecoderepublic/mara:arm64
+docker run --rm -it thecoderepublic/mara:latest
 ```
 
 **Optional: Create a wrapper script**
@@ -34,7 +34,7 @@ UID=$(id -u)
 GID=$(id -g)
 
 mkdir -p ${HOME}/devbox
-image=thecoderepublic/mara:arm64
+image=thecoderepublic/mara:latest
 docker pull ${image}
 
 docker run \
