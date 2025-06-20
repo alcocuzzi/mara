@@ -8,9 +8,6 @@ executors:
 
 jobs:
   build-and-push:
-    filters:
-      branches:
-        only: circleci-project-setup
     executor: docker-executor
     environment:
       DOCKER_BUILDKIT: 1
@@ -63,4 +60,8 @@ workflows:
   version: 2
   build-and-deploy:
     jobs:
-      - build-and-push
+      - build-and-push:
+          filters:
+            branches:
+              only: circleci-project-setup
+
