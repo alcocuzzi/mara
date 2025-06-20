@@ -9,8 +9,6 @@ executors:
 jobs:
   build-and-push:
     filters:
-      tags:
-        only: /.*/
       branches:
         only: circleci-project-setup
     executor: docker-executor
