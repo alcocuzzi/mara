@@ -1,6 +1,5 @@
 ### IMAGE VENDOR
 #checkov:skip=CKV_DOCKER_2 Healthcheck instructions have not been added to container images
-
 FROM ubuntu:noble AS base
 ENV UID="999"
 ENV GID="999"
