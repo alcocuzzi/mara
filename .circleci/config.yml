@@ -1,57 +1,32 @@
 version: 2.1
 
-executors:
-  docker-executor:
-    machine:
-      image: ubuntu-2204:current
-    working_directory: ~/repo
-
 jobs:
-  build-and-push:
-    executor: docker-executor
-    environment:
-      DOCKER_BUILDKIT: 1
-
+  build-arm64:
+    docker:
+      - image: cimg/base:stable
+    resource_class: small
     steps:
       - checkout
-
       - run:
-          name: Set up Docker Buildx with QEMU
+          name: Install Depot CLI
           command: |
-            docker run --privileged --rm tonistiigi/binfmt --install all
-            docker buildx create --name multiarch-builder --use
-            docker buildx inspect --bootstrap
-
+            curl -L https://depot.dev/install-cli.sh | sudo env DEPOT_INSTALL_DIR=/usr/local/bin sh
       - run:
           name: Login to Docker Hub
           command: echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
-
       - run:
-          name: Build and Push amd64 Image
+          name: Build ARM64 Image with Depot
           command: |
-            docker buildx build \
-              --builder multiarch-builder \
-              --platform linux/amd64 \
-              -t thecoderepublic/mara:amd64 \
-              -f Dockerfile .
-
-      - run:
-          name: Build and Push arm64 Image
-          command: |
-            docker buildx build \
-              --builder multiarch-builder \
+            depot build \
               --platform linux/arm64 \
               -t thecoderepublic/mara:arm64 \
               -f Dockerfile_arm64 .
-
       - run:
           name: Create and Push Multi-Arch Manifest
           command: |
             docker buildx imagetools create \
               --tag thecoderepublic/mara:latest \
-              thecoderepublic/mara:amd64 \
               thecoderepublic/mara:arm64
-
       - run:
           name: Inspect Multi-Arch Manifest
           command: docker buildx imagetools inspect thecoderepublic/mara:latest
@@ -60,5 +35,6 @@ workflows:
   version: 2
   build-and-deploy:
     jobs:
-      - build-and-push
+      - build-arm64
+
 
