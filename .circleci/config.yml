@@ -60,8 +60,5 @@ workflows:
   version: 2
   build-and-deploy:
     jobs:
-      - build-and-push:
-          filters:
-            branches:
-              only: circleci-project-setup
+      - build-and-push
 
