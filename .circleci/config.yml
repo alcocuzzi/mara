@@ -1,23 +1,68 @@
 version: 2.1
 
 executors:
-  arm64-executor:
-    docker:
-      - image: cimg/base:2025.06-22.04
+  docker-executor:
+    machine:
+      image: ubuntu-2204:current
+    working_directory: ~/repo
 
 jobs:
-  build-arm64:
-    executor: arm64-executor
+  build-and-push:
+    filters:
+      tags:
+        only: /.*/
+      branches:
+        only: circleci-project-setup
+    executor: docker-executor
+    environment:
+      DOCKER_BUILDKIT: 1
+
     steps:
       - checkout
-      - setup_remote_docker:
-          version: 20.10.7
+
       - run:
-          name: Build ARM64 Docker Image
+          name: Set up Docker Buildx with QEMU
           command: |
-            docker build --platform linux/arm64 -t my-arm64-image .
+            docker run --privileged --rm tonistiigi/binfmt --install all
+            docker buildx create --name multiarch-builder --use
+            docker buildx inspect --bootstrap
+
+      - run:
+          name: Login to Docker Hub
+          command: echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+
+      - run:
+          name: Build and Push amd64 Image
+          command: |
+            docker buildx build \
+              --builder multiarch-builder \
+              --platform linux/amd64 \
+              -t thecoderepublic/mara:amd64 \
+              -f Dockerfile .
+
+      - run:
+          name: Build and Push arm64 Image
+          command: |
+            docker buildx build \
+              --builder multiarch-builder \
+              --platform linux/arm64 \
+              -t thecoderepublic/mara:arm64 \
+              -f Dockerfile_arm64 .
+
+      - run:
+          name: Create and Push Multi-Arch Manifest
+          command: |
+            docker buildx imagetools create \
+              --tag thecoderepublic/mara:latest \
+              thecoderepublic/mara:amd64 \
+              thecoderepublic/mara:arm64
+
+      - run:
+          name: Inspect Multi-Arch Manifest
+          command: docker buildx imagetools inspect thecoderepublic/mara:latest
 
 workflows:
+  version: 2
   build-and-deploy:
     jobs:
-      - build-arm64
+      - build-and-push
