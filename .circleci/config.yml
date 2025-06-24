@@ -71,5 +71,6 @@ workflows:
             - setup_buildx
       - push_images:
           requires:
+            - setup_buildx
             - build-arm64
             - build-amd64
