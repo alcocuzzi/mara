@@ -15,7 +15,7 @@ jobs:
           name: Set up Docker Buildx
           command: |
             docker run --privileged --rm tonistiigi/binfmt --install all
-            docker buildx create --use
+            docker buildx create --platform "linux/arm64" --use
             docker buildx inspect --bootstrap
       - run:
           name: Login to Docker hub
@@ -27,7 +27,7 @@ jobs:
             --platform linux/arm64 \
             -f Dockerfile_arm64 \
             -t $DOCKERHUB_USERNAME/mara:latest \
-            -- push .
+            --push 
 workflows:
   build_and_push:
     jobs:
