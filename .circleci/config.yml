@@ -27,7 +27,8 @@ jobs:
             --platform linux/arm64 \
             -f Dockerfile_arm64 \
             -t $DOCKERHUB_USERNAME/mara:latest \
-            --push 
+            --push \
+            .
 workflows:
   build_and_push:
     jobs:
