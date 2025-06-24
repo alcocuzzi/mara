@@ -41,8 +41,8 @@ jobs:
           name: Build AMD64 image
           command: |
             docker buildx build \
-            --platform linux/amd64
-            -f Dockerfile
+            --platform linux/amd64 \
+            -f Dockerfile \
             -t $DOCKERHUB_USERNAME/mara:amd64 \
             .
   push_images:
