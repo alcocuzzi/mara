@@ -64,10 +64,10 @@ workflows:
     jobs:
       - build-arm64:
           requires:
-            setup_buildx
+            - setup_buildx
       - build-amd64:
           requires:
-            setup_buildx
+            - setup_buildx
       - push_images:
           requires:
             - build-arm64
