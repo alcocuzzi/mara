@@ -5,6 +5,10 @@ executors:
     machine: 
       image: ubuntu-2204:current
     resource_class: arm.medium
+  docker-amd64-executor:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: medium
 jobs:
   setup_buildx:
     executor: docker-arm64-executor
@@ -29,7 +33,7 @@ jobs:
             -t $DOCKERHUB_USERNAME/mara:arm64 \
             .
   build-amd64:
-    executor: docker-arm64-executor
+    executor: docker-amd64-executor
     steps:
       - checkout
       - run:
