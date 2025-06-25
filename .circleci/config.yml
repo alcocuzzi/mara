@@ -71,10 +71,9 @@ jobs:
           command: docker buildx imagetools inspect thecoderepublic/mara:latest
   clean_tmp_tags:
     docker:
-      - image: gcr.io/go-containerregistry/crane:debug
+      - image: alpine/crane:latest
     steps:
       - run:
-          shell: /busybox/sh
           name: Tag latest using crane
           command: |
             crane auth login -u $DOCKERHUB_USERNAME -p $DOCKERHUB_TOKEN index.docker.io
