@@ -33,7 +33,6 @@ jobs:
           command: |
             docker buildx build \
             --platform linux/arm64 \
-            -f Dockerfile_arm64 \
             -t $DOCKERHUB_USERNAME/mara:arm64 \
             --push \
             .
@@ -49,7 +48,6 @@ jobs:
           command: |
             docker buildx build \
             --platform linux/amd64 \
-            -f Dockerfile \
             -t $DOCKERHUB_USERNAME/mara:amd64 \
             --push \
             .
