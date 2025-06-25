@@ -32,7 +32,6 @@ jobs:
               --platform linux/arm64 \
               -f Dockerfile_arm64 \
               -t $DOCKERHUB_USERNAME/mara:temp-arm64 \
-              --push \
               .
 
   build-amd64:
@@ -55,7 +54,6 @@ jobs:
               --platform linux/amd64 \
               -f Dockerfile \
               -t $DOCKERHUB_USERNAME/mara:temp-amd64 \
-              --push \
               .
 
   create-manifest:
