@@ -5,71 +5,31 @@ executors:
     machine: 
       image: ubuntu-2204:current
     resource_class: arm.medium
-  docker-amd64-executor:
-    machine:
-      image: ubuntu-2204:current
-    resource_class: medium
 jobs:
-  setup_buildx:
+  build-and-push-multiarch:
     executor: docker-arm64-executor
     steps:
+      - checkout
       - run:
           name: Setup Docker Buildx
           command: |
             docker run --privileged --rm tonistiigi/binfmt --install all
-            docker buildx create --platform "linux/arm64,linux/amd64" --use
+            docker buildx create --use
             docker buildx inspect --bootstrap
-          
-  build-arm64:
-    executor: docker-arm64-executor
-    steps:
-      - checkout
       - run:
-          name: Build ARM64 image
+          name: Docker Login
+          command: echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+      - run:
+          name: Build and Push Multi-Arch Image as `latest`
           command: |
             docker buildx build \
-            --platform linux/arm64 \
-            -f Dockerfile_arm64 \
-            -t $DOCKERHUB_USERNAME/mara:arm64 \
-            .
-  build-amd64:
-    executor: docker-amd64-executor
-    steps:
-      - checkout
-      - run:
-          name: Build AMD64 image
-          command: |
-            docker buildx build \
-            --platform linux/amd64 \
-            -f Dockerfile \
-            -t $DOCKERHUB_USERNAME/mara:amd64 \
-            .
-  push_images:
-    executor: docker-arm64-executor
-    steps:
-      - run:
-          name: Create and push manifest for latest tag
-          command: | 
-            docker buildx imagetools create \
-            --tag $DOCKERHUB_USERNAME/mara:latest \
-            $DOCKERHUB_USERNAME/mara:amd64 \
-            $DOCKERHUB_USERNAME/mara:arm64
-      - run: 
-          name: Show pushed multi-arch manifest
-          command: docker buildx imagetools inspect thecoderepublic/mara:latest
-        
+              --platform linux/amd64,linux/arm64 \
+              -t $DOCKERHUB_USERNAME/mara:latest \
+              --push \
+              .
+
 workflows:
   build_and_push:
     jobs:
-      - setup_buildx
-      - build-arm64:
-          requires:
-            - setup_buildx
-      - build-amd64:
-          requires:
-            - setup_buildx
-      - push_images:
-          requires:
-            - setup_buildx
-            - build-arm64
+      - build-and-push-multiarch
             - build-amd64
