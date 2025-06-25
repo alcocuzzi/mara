@@ -35,7 +35,7 @@ jobs:
               .
 
   build-amd64:
-    executor: docker-amd64-executor
+    executor: docker-arm64-executor
     steps:
       - checkout
       - run:
