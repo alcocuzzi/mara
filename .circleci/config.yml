@@ -15,9 +15,6 @@ jobs:
     executor: docker-arm64-executor
     steps:
       - run:
-          name: Docker Login
-          command: echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
-      - run:
           name: Setup Docker Buildx
           command: |
             docker run --privileged --rm tonistiigi/binfmt --install all
@@ -28,6 +25,9 @@ jobs:
     executor: docker-arm64-executor
     steps:
       - checkout
+      - run:
+          name: Docker Login
+          command: echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
       - run:
           name: Build ARM64 image
           command: |
@@ -42,6 +42,9 @@ jobs:
     steps:
       - checkout
       - run:
+          name: Docker Login
+          command: echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+      - run:
           name: Build AMD64 image
           command: |
             docker buildx build \
@@ -53,6 +56,9 @@ jobs:
   push_images:
     executor: docker-arm64-executor
     steps:
+      - run:
+          name: Docker Login
+          command: echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
       - run:
           name: Create and push manifest for latest tag
           command: | 
