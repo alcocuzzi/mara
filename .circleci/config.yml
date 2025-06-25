@@ -15,6 +15,9 @@ jobs:
     executor: docker-arm64-executor
     steps:
       - run:
+          name: Docker Login
+          command: echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+      - run:
           name: Setup Docker Buildx
           command: |
             docker run --privileged --rm tonistiigi/binfmt --install all
