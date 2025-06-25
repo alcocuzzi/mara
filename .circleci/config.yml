@@ -11,7 +11,7 @@ executors:
     resource_class: medium
 
 jobs:
-  setup_buildx:
+  setup-buildx:
     executor: docker-arm64-executor
     steps:
       - run:
@@ -51,7 +51,7 @@ jobs:
             -t $DOCKERHUB_USERNAME/mara:amd64 \
             --push \
             .
-  push_images:
+  push-latest-tag:
     executor: docker-arm64-executor
     steps:
       - run:
@@ -67,7 +67,7 @@ jobs:
       - run: 
           name: Show pushed multi-arch manifest
           command: docker buildx imagetools inspect thecoderepublic/mara:latest
-  clean_tmp_tags:
+  clean-tmp-tags:
     docker:
       - image: alpine/crane:latest
     steps:
@@ -81,17 +81,17 @@ jobs:
 workflows:
   build_and_push:
     jobs:
-      - setup_buildx
+      - setup-buildx
       - build-arm64:
           requires:
-            - setup_buildx
+            - setup-buildx
       - build-amd64:
           requires:
-            - setup_buildx
-      - push_images:
+            - setup-buildx
+      - push-latest-tag:
           requires:
             - build-arm64
             - build-amd64
-      - clean_tmp_tags:
+      - clean-tmp-tags:
           requires:
-            - push_images
+            - push-latest-tag
