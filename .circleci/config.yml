@@ -32,6 +32,7 @@ jobs:
             --platform linux/arm64 \
             -f Dockerfile_arm64 \
             -t $DOCKERHUB_USERNAME/mara:arm64 \
+            --push \
             .
   build-amd64:
     executor: docker-amd64-executor
@@ -44,6 +45,7 @@ jobs:
             --platform linux/amd64 \
             -f Dockerfile \
             -t $DOCKERHUB_USERNAME/mara:amd64 \
+            --push \
             .
   push_images:
     executor: docker-arm64-executor
