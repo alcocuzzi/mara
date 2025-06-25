@@ -77,8 +77,8 @@ jobs:
           name: Tag latest using crane
           command: |
             crane auth login -u $DOCKERHUB_USERNAME -p $DOCKERHUB_TOKEN index.docker.io
-            crane delete index.docker.io/$DOCKERHUB_USERNAME/mara@$(crane digest index.docker.io/$DOCKERHUB_USERNAME/mara:arm64)
-            crane delete index.docker.io/$DOCKERHUB_USERNAME/mara@$(crane digest index.docker.io/$DOCKERHUB_USERNAME/mara:amd64)
+            crane delete index.docker.io/$DOCKERHUB_USERNAME/mara:arm64
+            crane delete index.docker.io/$DOCKERHUB_USERNAME/mara:amd64
 
 workflows:
   build_and_push:
