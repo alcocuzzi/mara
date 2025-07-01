@@ -81,17 +81,32 @@ jobs:
 workflows:
   build_and_push:
     jobs:
-      - setup-buildx
+      - setup-buildx:
+          filters:
+            tags:
+              only: /.*/
       - build-arm64:
           requires:
             - setup-buildx
+          filters:
+            tags:
+              only: /.*/
       - build-amd64:
           requires:
             - setup-buildx
+          filters:
+            tags:
+              only: /.*/
       - push-latest-tag:
           requires:
             - build-arm64
             - build-amd64
+          filters:
+            tags:
+              only: /.*/
       - clean-tmp-tags:
           requires:
             - push-latest-tag
+          filters:
+            tags:
+              only: /.*/
