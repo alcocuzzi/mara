@@ -1,0 +1,97 @@
+version: 2.1
+
+executors:
+  docker-arm64-executor:
+    machine: 
+      image: ubuntu-2204:current
+    resource_class: arm.medium
+  docker-amd64-executor:
+    machine:
+      image: ubuntu-2204:current
+    resource_class: medium
+
+jobs:
+  setup-buildx:
+    executor: docker-arm64-executor
+    steps:
+      - run:
+          name: Setup Docker Buildx
+          command: |
+            docker run --privileged --rm tonistiigi/binfmt --install all
+            docker buildx create --platform "linux/arm64,linux/amd64" --use
+            docker buildx inspect --bootstrap
+          
+  build-arm64:
+    executor: docker-arm64-executor
+    steps:
+      - checkout
+      - run:
+          name: Docker Login
+          command: echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+      - run:
+          name: Build ARM64 image
+          command: |
+            docker buildx build \
+            --platform linux/arm64 \
+            -t $DOCKERHUB_USERNAME/mara:arm64 \
+            --push \
+            .
+  build-amd64:
+    executor: docker-amd64-executor
+    steps:
+      - checkout
+      - run:
+          name: Docker Login
+          command: echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+      - run:
+          name: Build AMD64 image
+          command: |
+            docker buildx build \
+            --platform linux/amd64 \
+            -t $DOCKERHUB_USERNAME/mara:amd64 \
+            --push \
+            .
+  push-latest-tag:
+    executor: docker-arm64-executor
+    steps:
+      - run:
+          name: Docker Login
+          command: echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+      - run:
+          name: Create and push manifest for latest tag
+          command: | 
+            docker buildx imagetools create \
+            --tag $DOCKERHUB_USERNAME/mara:latest \
+            $DOCKERHUB_USERNAME/mara:amd64 \
+            $DOCKERHUB_USERNAME/mara:arm64
+      - run: 
+          name: Show pushed multi-arch manifest
+          command: docker buildx imagetools inspect thecoderepublic/mara:latest
+  clean-tmp-tags:
+    docker:
+      - image: alpine/crane:latest
+    steps:
+      - run:
+          name: Tag latest using crane
+          command: |
+            crane auth login -u $DOCKERHUB_USERNAME -p $DOCKERHUB_TOKEN index.docker.io
+            crane delete index.docker.io/$DOCKERHUB_USERNAME/mara:arm64
+            crane delete index.docker.io/$DOCKERHUB_USERNAME/mara:amd64
+
+workflows:
+  build_and_push:
+    jobs:
+      - setup-buildx
+      - build-arm64:
+          requires:
+            - setup-buildx
+      - build-amd64:
+          requires:
+            - setup-buildx
+      - push-latest-tag:
+          requires:
+            - build-arm64
+            - build-amd64
+      - clean-tmp-tags:
+          requires:
+            - push-latest-tag

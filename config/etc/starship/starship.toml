@@ -1,32 +1,39 @@
 format = """
-[mara](#ebfaeb)\
-[ ➦ ](#ebfaeb)\
+[❖ mara](#607D3B)\
+[ ❯ ](#607D3B)\
 $time\
 $directory\
 $git_branch\
 $git_state\
 $git_status\
 $env_var\
-$character"""
+$character
+"""
+
+[time]
+disabled = false
+time_format = "%R"
+style = "#607D3B"
+format = '[ $time ]($style)'
 
 [directory]
-style = "#adebad"
+style = "#607D3B"
 format = "[ $path ]($style)"
 truncation_length = 3
 truncation_symbol = "…/"
 
 [character]
-success_symbol = "[❯](bold green)"
+success_symbol = "[❯](cyan)"
 error_symbol = "[❯](red)"
-vimcmd_symbol = "[❮](green)"
+vimcmd_symbol = "[❮](cyan)"
 
 [git_branch]
-format = "[➦ $branch]($style)"
-style = "#33ff33"
+format = "[❯ $branch]($style)"
+style = "#607D3B"
 
 [git_status]
-format = "[[(*$conflicted$untracked$modified$staged$renamed$deleted)](#ff0066) ($ahead_behind$stashed)]($style)"
-style = "cyan"
+format = "[[(*$conflicted$untracked$modified$staged$renamed$deleted)](red) ($ahead_behind$stashed)]($style)"
+style = "(red)"
 conflicted = "​"
 untracked = "​"
 modified = "​"
@@ -37,34 +44,28 @@ stashed = "≡"
 
 [git_state]
 format = '\([$state( $progress_current/$progress_total)]($style)\) '
-style = "bright-black"
-
-[time]
-disabled = false
-time_format = "%R" # Hour:Minute Format
-style = "#d6f5d6"
-format = '[ $time ]($style)'
+style = "#607D3B"
 
 [env_var.mara_acc_alias]
 variable = "mara_acc_alias"
-style = "#2eb82e"
-symbol = '➦'
-format = '[[$symbol $env_value ](#2eb82e)]($style)'
+style = "#607D3B"
+symbol = '❯'
+format = '[[$symbol $env_value ]($style)]($style)'
 
 [env_var.mara_acc_number]
 variable = "mara_acc_number"
-style = "#2eb82e"
-symbol = '➦'
-format = '[[$symbol $env_value ](#2eb82e)]($style)'
+style = "#607D3B"
+symbol = '❯'
+format = '[[$symbol $env_value ]($style)]($style)'
 
 [env_var.mara_identity]
 variable = "mara_identity"
-style = "#2eb82e"
+style = "#607D3B"
 symbol = '|'
-format = '[[$symbol $env_value ](#2eb82e)]($style)'
+format = '[[$symbol $env_value ]($style)]($style)'
 
 [env_var.mara_region]
 variable = "mara_region"
-style = "#2eb82e"
+style = "#607D3B"
 symbol = ''
-format = '[[| $env_value](#2eb82e) ]($style)'
+format = '[[| $env_value]($style) ]($style)'
