@@ -1,0 +1,59 @@
+#!/usr/bin/env python3
+"""
+Mara utility to display installed tools loaded from docker build environment variables.
+
+Usage:
+  tools [options]
+
+Options:
+  -h, --help     Show this help message and exit
+  --debug        Show more verbose logging
+"""
+
+import os
+import sys
+from logging import basicConfig, getLogger, DEBUG, INFO
+from rich.console import Console
+from rich.logging import RichHandler
+from tabulate import tabulate
+import docopt
+
+# Logging configuration
+FORMAT = "%(message)s"
+basicConfig(
+    format=FORMAT,
+    datefmt="[%X]",
+    handlers=[RichHandler()],
+    level=INFO,
+)
+_log = getLogger("rich")
+console = Console()
+
+def display_tools():
+    os_tools = sorted(os.getenv("OS_TOOLS", "").split())
+    py_tools = sorted(os.getenv("PY_TOOLS", "").split())
+    cli_tools = sorted(os.getenv("CLI_TOOLS", "").replace(",", "").split())
+
+    data = [
+        ["OS_TOOLS", " ".join(os_tools)],
+        ["PY_TOOLS", " ".join(py_tools)],
+        ["CLI_TOOLS", " ".join(cli_tools)],
+    ]
+
+    console.print(tabulate(data, headers=["Classification", "Tool name"], tablefmt="rounded_grid"))
+
+def main(options):
+    if options["--debug"]:
+        _log.setLevel(DEBUG)
+        _log.debug("Debug mode enabled")
+        for key, value in options.items():
+            _log.debug(f"{key}: {value}")
+
+    display_tools()
+
+if __name__ == "__main__":
+    try:
+        options = docopt.docopt(__doc__)
+        main(options)
+    except docopt.DocoptExit:
+        sys.exit(1)

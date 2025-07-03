@@ -17,13 +17,9 @@ try:
     script_name = sys.argv[1]
     script_args = sys.argv[2:]  # Extract additional arguments
 except IndexError:
-    available_commands = subprocess.run(['ls', '/app/scripts/'], capture_output=True, text=True)
-    print("\033[1;35m╔═════════════════════════════════════════════════╗")
-    print("\033[1;35m║    ↓ ↓     Available Mara Commands     ↓ ↓      ║")
-    print("\033[1;35m╚═════════════════════════════════════════════════╝\n")
-    
-    for i, command in enumerate(available_commands.stdout.splitlines(), 1):
-      print(f"\033[1;32m{i} ➦ {command}")
+    _log.warning("No command specified. Please provide a command to proceed.")
+    _log.info("Type `mara help` to check available commands.")
+    _log.info("You can also run `mara <command> -h` to explore options for a specific command.")
     sys.exit(1)
 
 try:
