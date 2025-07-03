@@ -1,0 +1,130 @@
+#!/usr/bin/env python3
+"""
+Utility to display useful cheat-sheet commands from useful tools.
+
+Usage:
+  cheat-sheet [options]
+
+Options:
+  -g, --git                  Show useful commands for git/git-cli utilities
+  -h, --help                 Show this help message and exit
+  --debug                    Show more verbose logging
+"""
+
+from tabulate import tabulate
+import docopt
+from logging import basicConfig, getLogger, INFO, DEBUG
+from rich.console import Console
+from rich.logging import RichHandler
+import sys
+
+# Logging configuration
+FORMAT = "%(message)s"
+basicConfig(
+    format=FORMAT, datefmt="[%X]", handlers=[RichHandler()], level=INFO,
+)
+_log = getLogger("rich")
+console = Console()
+
+gh_commands = {
+    "Core Workflow": [
+        {"command": "gh auth login", "description": "Authenticate with GitHub (interactive setup)."},
+        {"command": "gh repo clone <repo>", "description": "Clone a GitHub repository."},
+        {"command": "gh repo create", "description": "Create a new GitHub repo (interactive or scripted)."},
+        {"command": "gh repo fork", "description": "Fork a repository."},
+        {"command": "gh repo view", "description": "Show details about a repository."},
+    ],
+    "Pull Requests": [
+        {"command": "gh pr create", "description": "Create a new pull request."},
+        {"command": "gh pr list", "description": "List open PRs."},
+        {"command": "gh pr checkout <number>", "description": "Check out a PR locally."},
+        {"command": "gh pr view <number>", "description": "View a PR's details."},
+        {"command": "gh pr merge <number>", "description": "Merge a PR (supports merge, squash, rebase)."},
+    ],
+    "Issues": [
+        {"command": "gh issue create", "description": "Create a new issue."},
+        {"command": "gh issue list", "description": "List issues with filters."},
+        {"command": "gh issue view <number>", "description": "View issue details."},
+        {"command": "gh issue close <number>", "description": "Close an issue."},
+        {"command": "gh issue reopen <number>", "description": "Reopen a closed issue."},
+    ],
+    "Repository Management": [
+        {"command": "gh repo edit", "description": "Edit repo settings, description, topics, etc."},
+        {"command": "gh repo archive", "description": "Archive a repository."},
+        {"command": "gh repo delete", "description": "Delete a repository (with confirmation)."},
+    ],
+    "Comments & Reviews": [
+        {"command": "gh pr comment <number> --body \"Looks good\"", "description": "Add a comment to a PR."},
+        {"command": "gh issue comment <number> --body \"Noted.\"", "description": "Comment on an issue."},
+        {"command": "gh pr review --approve", "description": "Approve a pull request."},
+    ],
+    "Releases": [
+        {"command": "gh release create <tag> <files>", "description": "Create a new release with assets."},
+        {"command": "gh release list", "description": "List all releases."},
+        {"command": "gh release delete <tag>", "description": "Delete a release."},
+    ],
+    "Search": [
+        {"command": "gh search repos --topic cli", "description": "Search repos by topic."},
+        {"command": "gh search issues --state open --label bug", "description": "Search issues with filters."},
+        {"command": "gh pr list --assignee @me", "description": "List your assigned pull requests."},
+    ],
+    "Status & Reports": [
+        {"command": "gh status", "description": "Show the current status of GitHub services."},
+        {"command": "gh api user", "description": "Get authenticated user's profile via GitHub API."},
+        {"command": "gh notifications", "description": "List unread GitHub notifications."},
+        {"command": "gh pr list --author @me", "description": "Show PRs you've authored."},
+        {"command": "gh issue list --author @me", "description": "Show issues you've created."},
+        {"command": "gh api repos/:owner/:repo/stats/contributors", "description": "Get repository contribution stats (raw API)."},
+        {"command": "gh api rate_limit", "description": "Check your GitHub API rate limit."}
+    ],
+    "Tips": [
+        {"command": "gh pr view <number> --web", "description": "Open a PR in the browser."},
+        {"command": "gh pr list --json title,author | jq .", "description": "Script-friendly JSON output."},
+        {"command": "gh alias set co 'pr checkout'", "description": "Set a custom command alias."},
+    ],
+    "Git CLI Top commands": [
+        {"command": "git status", "description": "Show the working tree status."},
+        {"command": "git add <file>", "description": "Add file contents to the index (staging)."},
+        {"command": "git commit -m \"message\"", "description": "Commit staged changes with a message."},
+        {"command": "git push", "description": "Push local commits to the remote repository."},
+        {"command": "git pull", "description": "Fetch from remote and merge changes."},
+        {"command": "git clone <repo>", "description": "Clone a remote repository locally."},
+        {"command": "git branch", "description": "List branches or create/delete branches."},
+        {"command": "git checkout <branch>", "description": "Switch to a branch or restore files."},
+        {"command": "git checkout -b <branch>", "description": "Creates a new branch based on existing branch."},
+        {"command": "git merge <branch>", "description": "Merge a branch into the current one."},
+        {"command": "git log", "description": "Show commit logs."},
+        {"command": "git reset --soft HEAD~<NumberOfCommits>", "description": "Undo <NumberOfCommits> but keep changes staged."},
+        {"command": "git rebase <branch>", "description": "Reapply commits on top of another base tip."},
+        {"command": "git fetch -pP", "description": "Fetch changes from remote and prune deleted branches/tags."},
+        {"command": "git tag <tagname>", "description": "Create a new tag."},
+        {"command": "git push origin <tagname>", "description": "Push a tag to the remote repository."},
+    ],
+}
+
+def display_commands(data):
+    for category, commands in data.items():
+        console.print(f"\n [bold green]{category}[/bold green]")
+        table = [[cmd["command"], cmd["description"]] for cmd in commands]
+        console.print(tabulate(table, headers=["Command", "Description"], tablefmt="rounded_grid"))
+
+def main(options):
+    if options.get("--debug"):
+        _log.setLevel(DEBUG)
+        _log.debug("Debug mode enabled")
+        for key, value in options.items():
+            _log.debug(f"{key}: {value}")
+
+    if options.get("--git"):
+        _log.info("Showing Git and GitHub CLI useful commands...")
+        display_commands(gh_commands)
+    else:
+        _log.warning("No valid option provided. See --help for usage.")
+
+
+if __name__ == "__main__":
+    try:
+        options = docopt.docopt(__doc__)
+        main(options)
+    except docopt.DocoptExit:
+        sys.exit(1)

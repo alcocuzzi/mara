@@ -4,8 +4,8 @@ ENV GID="999"
 ENV USER="mara"
 ENV GROUP="mara"
 ENV OS_TOOLS="wget curl git python3 python3-pip sudo tar unzip less jq vim fish gpg netcat-traditional cookiecutter"
-ENV PY_TOOLS="configparser==7.2.0 docopt==0.6.2 pre-commit==4.2.0 rich==13.7.1 boto3==1.38.36 botocore==1.38.36 PyGithub==2.6.1 pygit2==1.18.0"
-ENV CLI_TOOLS="awscli, helm, tfsec, tflint, kubectl, argocd, terraform, k9s, ssm-session-manager"
+ENV PY_TOOLS="configparser==7.2.0 docopt==0.6.2 pre-commit==4.2.0 rich==13.7.1 boto3==1.38.36 botocore==1.38.36 PyGithub==2.6.1 pygit2==1.18.0 tabulate==0.9.0"
+ENV CLI_TOOLS="awscli, helm, tfsec, tflint, kubectl, argocd, terraform, k9s, ssm-session-manager github-cli"
 RUN apt-get update -y && \
     apt-get install ${OS_TOOLS} --no-install-recommends -y && \
     pip3 install --no-cache-dir ${PY_TOOLS} --break-system-packages && \
@@ -13,6 +13,7 @@ RUN apt-get update -y && \
 
 FROM base AS install
 ENV TF_VERSION="1.12.2"
+ENV GIT_CLI_VERSION="2.74.2"
 WORKDIR /tmp
 RUN ARCH=$(uname -m) && \
     case "$ARCH" in x86_64) ARCH_SHORT=amd64; ARCH_SSM=64bit ;; aarch64) ARCH_SHORT=arm64; ARCH_SSM=arm64 ;; esac && \
@@ -26,10 +27,12 @@ RUN ARCH=$(uname -m) && \
     curl -fsSL "https://releases.hashicorp.com/terraform/${TF_VERSION}/terraform_${TF_VERSION}_linux_${ARCH_SHORT}.zip" -o terraform.zip && unzip -q terraform.zip && \
     curl -sSL -o k9s_linux_${ARCH_SHORT}.deb https://github.com/derailed/k9s/releases/latest/download/k9s_linux_${ARCH_SHORT}.deb && \
     curl -fsSL "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/ubuntu_${ARCH_SSM}/session-manager-plugin.deb" -o session-manager-plugin.deb && \
+    curl -fSSL "https://github.com/cli/cli/releases/download/v${GIT_CLI_VERSION}/gh_${GIT_CLI_VERSION}_linux_${ARCH_SHORT}.deb" -o gh_linux.deb && \
     unzip ./awscliv2.zip -d /tmp && \
     /tmp/aws/install && \
-    dpkg -i k9s_linux_${ARCH_SHORT}.deb && \
-    dpkg -i session-manager-plugin.deb && \
+    for deb in *.deb; do \
+        dpkg -i $deb; \
+    done && \
     install -m 0755 kubectl /usr/local/bin/kubectl && \
     install -m 0755 argocd-linux-${ARCH_SHORT} /usr/local/bin/argocd && \
     install -m 0755 terraform /usr/local/bin/terraform && \
