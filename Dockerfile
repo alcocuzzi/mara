@@ -3,7 +3,7 @@ ENV UID="999"
 ENV GID="999"
 ENV USER="mara"
 ENV GROUP="mara"
-ENV OS_TOOLS="wget curl git python3 python3-pip sudo tar unzip less jq vim fish gpg netcat-traditional cookiecutter"
+ENV OS_TOOLS="wget curl git python3 python3-pip sudo tar unzip less jq vim fish gpg netcat-traditional nano cookiecutter"
 ENV PY_TOOLS="configparser==7.2.0 docopt==0.6.2 pre-commit==4.2.0 rich==13.7.1 boto3==1.38.36 botocore==1.38.36 PyGithub==2.6.1 pygit2==1.18.0 tabulate==0.9.0"
 ENV CLI_TOOLS="awscli, helm, tfsec, tflint, kubectl, argocd, terraform, k9s, ssm-session-manager github-cli"
 RUN apt-get update -y && \
@@ -40,10 +40,12 @@ RUN ARCH=$(uname -m) && \
 
 FROM install AS mara
 COPY config /tmp/
-RUN useradd -m -s /usr/bin/fish $USER && \
+RUN ARCH=$(uname -m) && \
+    case "$ARCH" in x86_64) ARCH_SHORT=amd64; ARCH_SSM=64bit ;; aarch64) ARCH_SHORT=arm64; ARCH_SSM=arm64 ;; esac && \
+    useradd -m -s /usr/bin/fish $USER && \
     usermod -u $UID $USER && groupmod -g $GID $GROUP && \
     echo "mara ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers && \
-    curl -SsL https://github.com/boxboat/fixuid/releases/download/v0.6.0/fixuid-0.6.0-linux-amd64.tar.gz | tar -C /usr/local/bin -xzf - && \
+    curl -SsL https://github.com/boxboat/fixuid/releases/download/v0.6.0/fixuid-0.6.0-linux-${ARCH_SHORT}.tar.gz | tar -C /usr/local/bin -xzf - && \
     mkdir -p /app/scripts /home/mara/.aws /etc/fixuid /home/mara/.config /home/mara/.config/fish/functions && \
     cp -R /tmp/bin/mara /usr/local/bin/mara && \
     cp -R /tmp/bin/scripts/* /app/scripts/ && \
