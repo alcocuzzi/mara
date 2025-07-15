@@ -45,13 +45,15 @@ def login():
     
   except CalledProcessError:
     _log.info("No AWS profiles have been found. Let's create a profile for you.\n")
-    #valid_outputs = ["json", "yaml", "yaml-stream", "text", "table"]
-    aws_profile_name = input("AWS Profile Name: ")
-    aws_access_key_id = input(f"AWS Access Key ID [{aws_profile_name}]: ")
-    aws_secret_access_key = input(f"AWS Secret Access Key [{aws_profile_name}]: ")
-    aws_mfa_arn = input(f"AWS Multi-Factor Authenticator ARN [{aws_profile_name}]: ")
-    aws_region = input(f"AWS Region Name [{aws_profile_name}]: ")
-    aws_output = input(f"AWS Output Format [{aws_profile_name}]: ")
+    try:
+      aws_profile_name = input("AWS Profile Name: ")
+      aws_access_key_id = input(f"AWS Access Key ID [{aws_profile_name}]: ")
+      aws_secret_access_key = input(f"AWS Secret Access Key [{aws_profile_name}]: ")
+      aws_mfa_arn = input(f"AWS Multi-Factor Authenticator ARN [{aws_profile_name}]: ")
+      aws_region = input(f"AWS Region Name [{aws_profile_name}]: ")
+      aws_output = input(f"AWS Output Format [{aws_profile_name}]: ")
+    except KeyboardInterrupt:
+      exit(0)
   
   # Creating profile structure
     run(["mkdir", "-p", f"/tmp/aws/{aws_profile_name}/"])
@@ -92,14 +94,17 @@ def login():
   folders = output.split()
   folders.sort()
   print("\n")
-  print("╔════════════════════════════════════════════════╗")
-  print("║     ↓ ↓     Available AWS Profiles     ↓ ↓     ║")
-  print("╚════════════════════════════════════════════════╝\n")
+  print("╭─────────────────────────────────────────────────╮")
+  print("│     ↓ ↓     Available AWS Profiles     ↓ ↓      │")
+  print("╰─────────────────────────────────────────────────╯\n")
     
   for i, folder in enumerate(folders, 1):
     print(f"{i} ➦ {folder}")
 
-  selected_index = input("\nPlease enter the number of the profile you want to use: ") 
+  try:
+    selected_index = input("\nPlease enter the number of the profile you want to use: ")
+  except KeyboardInterrupt:
+    exit(0)
   
   try:
     selected_index = int(selected_index)

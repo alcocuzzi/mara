@@ -219,8 +219,11 @@ def choose_container(containers):
         table.add_row(str(i+1), container)
     
     console.print(table)
-    
-    choice = input("Enter container number: ")
+    try:
+        choice = input("Enter container number: ")
+    except KeyboardInterrupt:
+        exit(0)
+        
     try:
         idx = int(choice) - 1
         if 0 <= idx < len(containers):
