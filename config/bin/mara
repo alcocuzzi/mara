@@ -4,6 +4,7 @@ from os import path
 import logging
 import subprocess
 from rich.logging import RichHandler
+from sys import exit
 
 # Logging configuration
 FORMAT = "%(message)s"
@@ -28,7 +29,10 @@ try:
 
     if path.isfile(script_path):
         args = [sys.executable, script_path] + script_args  # Include additional arguments
-        subprocess.run(args, check=True)
+        try:
+            subprocess.run(args, check=True)
+        except KeyboardInterrupt:
+            exit(0)
 
     else:
         _log.error(f"Script '{script_name}' not found.")
