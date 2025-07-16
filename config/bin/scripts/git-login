@@ -38,15 +38,13 @@ getLogger('botocore').setLevel(WARNING)
 def load_credentials():
   home_dir = environ['HOME']
   git_platforms = ["Github", "Gitlab"]
-  print("╭─────────────────────────────────────────────────╮")
-  print("│     ↓ ↓     Available Git Platforms     ↓ ↓     │")
-  print("╰─────────────────────────────────────────────────╯\n")
+  print("Please enter the number of the Git platform you want to login:")
   
   for i, platform in enumerate(git_platforms, 1):
-    print(f"{i} ➦ {platform}")
+    print(f"{i} ❯ {platform}")
 
   try:
-    selected_index = input("\nPlease enter the number of the platform you want to use: ")
+    selected_index = input()
   except KeyboardInterrupt:
     exit(0)
   
@@ -70,18 +68,51 @@ def load_credentials():
     _log.warning("Invalid input. Please enter a number.")
     exit(0)
   
+  token_load_method = ["SSM parameter store", "Pasted manually"]
+  
   try:
     username = input(f"\nPlease enter the {selected_platform} username: ")
     email = input(f"\nPlease enter the {selected_platform} e-mail address: ")
-    user_provider_ssm_parameter = input("Please enter the SSM parameter name or press enter to ignore and paste access token manually: ")
+    if not username and not email:
+      _log.warning("No username and e-mail have been set. This will cause the commits to have no identity.")
+    elif not username:
+      _log.warning("No username has been set. This will cause the commits to have no identity.")
+    elif not email:
+      _log.warning("No e-mail has been set. This will cause the commits to have no identity.")
+
+
+    print("\nPlease select how to load your Git PAT (Personal Access Token) and hit 'Enter`:")
+    for i, token_method in enumerate(token_load_method, 1):
+      print(f"{i} ❯ {token_method}")
+      
+    selected_index = input()
+      
+    try:
+      selected_index = int(selected_index)
+      # Check if the selected index is valid
+      if 1 <= selected_index <= len(token_load_method):
+        selected_token_method = token_load_method[selected_index - 1]
+        if selected_token_method == token_load_method[0]:
+          user_provided_ssm_parameter_name = input("Please provide the SSM parameter name (e.g. /mara/github) and hit 'Enter`: ")
+        else:
+          git_personal_token = input(f"Please provide your {selected_platform} personal access token and hit `Enter`: ")
+      else:
+        _log.warning("Invalid selection. Please choose a valid number.")
+        exit(0)
+    
+    except ValueError:
+      _log.warning("Invalid input. Please enter a number.")
+      exit(0)
+
   except KeyboardInterrupt:
     exit(0)
-  
-  if user_provider_ssm_parameter:
+
+
+  if selected_token_method == token_load_method[0]:
     try:
       ssm_client = client("ssm")
       response = ssm_client.get_parameter(
-      Name=user_provider_ssm_parameter,
+      Name=user_provided_ssm_parameter_name,
       WithDecryption=True
       )['Parameter']
   
@@ -98,12 +129,6 @@ def load_credentials():
     else:
       _log.warning("SSM Git parameters not found in %s region. Please switch to the region where you have SSM Git parameters stored", region_name)
       _log.info("Let's try another method?")
-  
-  else:
-    try:
-      git_personal_token = input(f"Please provide your {selected_platform} access token and hit `Enter`: ")
-    except KeyboardInterrupt:
-      exit(0)
       
   try:
     run("set -Ux GH_TOKEN " + git_personal_token, shell=True, executable="/usr/bin/fish", check=True)
