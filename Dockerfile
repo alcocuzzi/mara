@@ -28,6 +28,8 @@ RUN ARCH=$(uname -m) && \
     curl -sSL -o k9s_linux_${ARCH_SHORT}.deb https://github.com/derailed/k9s/releases/latest/download/k9s_linux_${ARCH_SHORT}.deb && \
     curl -fsSL "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/ubuntu_${ARCH_SSM}/session-manager-plugin.deb" -o session-manager-plugin.deb && \
     curl -fSSL "https://github.com/cli/cli/releases/download/v${GIT_CLI_VERSION}/gh_${GIT_CLI_VERSION}_linux_${ARCH_SHORT}.deb" -o gh_linux.deb && \
+    curl -fSSL "https://github.com/terraform-docs/terraform-docs/releases/download/v0.18.0/terraform-docs-v0.18.0-$(uname)-${ARCH_SHORT}.tar.gz" -o terraform-docs.tar.gz && \
+    tar -xzf terraform-docs.tar.gz && mv terraform-docs /usr/local/bin/terraform-docs && \
     unzip ./awscliv2.zip -d /tmp && \
     /tmp/aws/install && \
     for deb in *.deb; do \
