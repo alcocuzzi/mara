@@ -93,7 +93,7 @@ def load_credentials():
       if 1 <= selected_index <= len(token_load_method):
         selected_token_method = token_load_method[selected_index - 1]
         if selected_token_method == token_load_method[0]:
-          user_provided_ssm_parameter_name = input("Please provide the SSM parameter name (e.g. /mara/github) and hit 'Enter`: ")
+          user_provided_ssm_parameter_name = input("SSM parameter name [default: /mara/github]: ") or "/mara/github"
         else:
           git_personal_token = input(f"Please provide your {selected_platform} personal access token and hit `Enter`: ")
       else:
