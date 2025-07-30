@@ -3,7 +3,7 @@ ENV UID="999"
 ENV GID="999"
 ENV USER="mara"
 ENV GROUP="mara"
-ENV OS_TOOLS="wget curl git python3 python3-pip sudo tar unzip less jq vim fish gpg netcat-traditional nano cookiecutter unzip"
+ENV OS_TOOLS="wget curl git python3 python3-pip sudo tar unzip less jq vim fish gpg netcat-traditional nano cookiecutter zip"
 ENV PY_TOOLS="configparser==7.2.0 docopt==0.6.2 pre-commit==4.2.0 rich==13.7.1 boto3==1.38.36 botocore==1.38.36 PyGithub==2.6.1 pygit2==1.18.0 tabulate==0.9.0"
 ENV CLI_TOOLS="awscli, helm, tfsec, tflint, kubectl, argocd, terraform, k9s, ssm-session-manager github-cli supabase-cli"
 RUN apt-get update -y && \
