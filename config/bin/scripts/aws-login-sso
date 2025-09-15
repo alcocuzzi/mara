@@ -7,7 +7,7 @@ Usage:
 
 Options:
   -r, --region=region     Gives the ability to set a default region 
-                          for the credentials profile [default: us-west-2]
+                          for the credentials profile [default: eu-west-1]
   -h, --help              Show this help message and exit
   --debug                 Show more verbose logging
 """
