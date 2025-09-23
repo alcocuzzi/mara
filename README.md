@@ -33,7 +33,6 @@ In order to create the wrapper script, please follow the below steps:
 UID=$(id -u)
 GID=$(id -g)
 
-mkdir -p ${HOME}/devbox
 image=thecoderepublic/mara:latest
 docker pull ${image}
 
@@ -42,7 +41,7 @@ docker run \
    --name=mara \
    --rm \
    -u $UID:$GID \
-   -v ${HOME}/devbox:/home/mara/devbox \
+   -v ${HOME}:/home/mara/devbox \
    ${image}
 ```
 
@@ -61,7 +60,7 @@ From now on, use any code editor to open ${HOME}/devbox folder and store code th
 To find the mara utilities and starting using them, type the `mara` command and check out its functionalities:
 
 ```console
-~$ mara
+mara
 ```
 
 Please note that the credentials are exposed to the container only during the usage time and they will be gone after exiting the container.

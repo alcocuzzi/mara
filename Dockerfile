@@ -1,20 +1,19 @@
-FROM ubuntu:noble AS base
+FROM ubuntu:questing AS base
 ENV UID="999"
 ENV GID="999"
 ENV USER="mara"
 ENV GROUP="mara"
 ENV OS_TOOLS="wget curl git python3 python3-pip sudo tar unzip less jq vim fish gpg netcat-traditional nano cookiecutter zip"
-ENV PY_TOOLS="configparser==7.2.0 docopt==0.6.2 pre-commit==4.2.0 rich==13.7.1 boto3==1.38.36 botocore==1.38.36 PyGithub==2.6.1 pygit2==1.18.0 tabulate==0.9.0"
-ENV CLI_TOOLS="awscli, helm, tfsec, tflint, kubectl, argocd, terraform, k9s, ssm-session-manager github-cli"
+ENV PY_TOOLS="configparser==7.2.0 docopt==0.6.2 pre-commit==4.2.0 rich==13.9.4 boto3==1.38.36 botocore==1.38.36 PyGithub==2.6.1 pygit2==1.18.0 tabulate==0.9.0 poetry==2.2.1"
+ENV CLI_TOOLS="awscli, helm, tfsec, tflint, kubectl, terraform, k9s, ssm-session-manager github-cli"
 RUN apt-get update -y && \
     apt-get install ${OS_TOOLS} --no-install-recommends -y && \
     pip3 install --no-cache-dir ${PY_TOOLS} --break-system-packages && \
     apt clean && rm -rf /var/lib/apt/lists/*
 
 FROM base AS install
-ENV TF_VERSION="1.12.2"
-ENV GIT_CLI_VERSION="2.74.2"
-ENV SUPABASE_VERSION="2.33.6"
+ENV TF_VERSION="1.13.3"
+ENV GIT_CLI_VERSION="2.79.0"
 WORKDIR /tmp
 RUN ARCH=$(uname -m) && \
     case "$ARCH" in x86_64) ARCH_SHORT=amd64; ARCH_SSM=64bit ;; aarch64) ARCH_SHORT=arm64; ARCH_SSM=arm64 ;; esac && \
@@ -30,7 +29,6 @@ RUN ARCH=$(uname -m) && \
     curl -fsSL "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/ubuntu_${ARCH_SSM}/session-manager-plugin.deb" -o session-manager-plugin.deb && \
     curl -fSSL "https://github.com/cli/cli/releases/download/v${GIT_CLI_VERSION}/gh_${GIT_CLI_VERSION}_linux_${ARCH_SHORT}.deb" -o gh_linux.deb && \
     curl -fSSL "https://github.com/terraform-docs/terraform-docs/releases/download/v0.18.0/terraform-docs-v0.18.0-$(uname)-${ARCH_SHORT}.tar.gz" -o terraform-docs.tar.gz && \
-    curl -fSSL "https://github.com/supabase/cli/releases/download/v${SUPABASE_VERSION}/supabase_${SUPABASE_VERSION}_linux_${ARCH_SHORT}.deb" -o supabase_linux.deb && \
     tar -xzf terraform-docs.tar.gz && mv terraform-docs /usr/local/bin/terraform-docs && \
     unzip ./awscliv2.zip -d /tmp && \
     /tmp/aws/install && \
@@ -46,6 +44,7 @@ FROM install AS mara
 COPY config /tmp/
 RUN ARCH=$(uname -m) && \
     case "$ARCH" in x86_64) ARCH_SHORT=amd64; ARCH_SSM=64bit ;; aarch64) ARCH_SHORT=arm64; ARCH_SSM=arm64 ;; esac && \
+    userdel ubuntu && rm -rf /home/ubuntu && \
     useradd -m -s /usr/bin/fish $USER && \
     usermod -u $UID $USER && groupmod -g $GID $GROUP && \
     echo "mara ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers && \
