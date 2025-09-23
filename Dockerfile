@@ -35,7 +35,6 @@ RUN ARCH=$(uname -m) && \
         dpkg -i $deb; \
     done && \
     install -m 0755 kubectl /usr/local/bin/kubectl && \
-    install -m 0755 argocd-linux-${ARCH_SHORT} /usr/local/bin/argocd && \
     install -m 0755 terraform /usr/local/bin/terraform && \
     apt clean && rm -rf /var/lib/apt/lists/* /tmp/*
 
