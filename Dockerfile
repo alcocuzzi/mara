@@ -1,6 +1,6 @@
 FROM ubuntu:questing AS base
-ENV UID="999"
-ENV GID="999"
+ENV UID="10007"
+ENV GID="10007"
 ENV USER="mara"
 ENV GROUP="mara"
 ENV OS_TOOLS="wget curl git python3 python3-pip sudo tar unzip less jq vim fish gpg netcat-traditional nano cookiecutter zip ssh"
