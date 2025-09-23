@@ -3,8 +3,8 @@ ENV UID="999"
 ENV GID="999"
 ENV USER="mara"
 ENV GROUP="mara"
-ENV OS_TOOLS="wget curl git python3 python3-pip sudo tar unzip less jq vim fish gpg netcat-traditional nano cookiecutter zip"
-ENV PY_TOOLS="configparser==7.2.0 docopt==0.6.2 pre-commit==4.2.0 rich==13.9.4 boto3==1.38.36 botocore==1.38.36 PyGithub==2.6.1 pygit2==1.18.0 tabulate==0.9.0 poetry==2.2.1"
+ENV OS_TOOLS="wget curl git python3 python3-pip sudo tar unzip less jq vim fish gpg netcat-traditional nano cookiecutter zip ssh"
+ENV PY_TOOLS="configparser==7.2.0 docopt==0.6.2 pre-commit==4.2.0 rich==13.9.4 boto3==1.38.36 botocore==1.38.36 PyGithub==2.6.1 pygit2==1.18.0 tabulate==0.9.0 poetry==2.2.1 ansible==12.0.0"
 ENV CLI_TOOLS="awscli, helm, tfsec, tflint, kubectl, terraform, k9s, ssm-session-manager github-cli"
 RUN apt-get update -y && \
     apt-get install ${OS_TOOLS} --no-install-recommends -y && \
@@ -23,7 +23,6 @@ RUN ARCH=$(uname -m) && \
     curl -fsSL https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash && \
     curl -fsSL https://raw.githubusercontent.com/aquasecurity/tfsec/master/scripts/install_linux.sh | bash && \
     curl -fsSL -o kubectl "https://dl.k8s.io/release/$(curl -fsSL https://dl.k8s.io/release/stable.txt)/bin/linux/${ARCH_SHORT}/kubectl" && \
-    curl -fsSL -o argocd-linux-${ARCH_SHORT} https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-${ARCH_SHORT} && \
     curl -fsSL "https://releases.hashicorp.com/terraform/${TF_VERSION}/terraform_${TF_VERSION}_linux_${ARCH_SHORT}.zip" -o terraform.zip && unzip -q terraform.zip && \
     curl -sSL -o k9s_linux_${ARCH_SHORT}.deb https://github.com/derailed/k9s/releases/latest/download/k9s_linux_${ARCH_SHORT}.deb && \
     curl -fsSL "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/ubuntu_${ARCH_SSM}/session-manager-plugin.deb" -o session-manager-plugin.deb && \
