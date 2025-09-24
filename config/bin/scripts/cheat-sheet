@@ -219,6 +219,7 @@ def main(options):
         _log.info("Showing Git and GitHub CLI useful commands...")
         display_commands(gh_commands)
     if options.get("--ansible"):
+        display_commands(ansible_commands)
         _log.info("Showing Ansible useful commands...")
     if options.get("--vi"):
         _log.info("Showing Vi useful commands...")
