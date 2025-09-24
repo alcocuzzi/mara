@@ -3,7 +3,7 @@
 Mara utility to load short-term AWS SSO credentials.
 
 Usage:
-  load-sso-credentials [options]
+  aws-login-sso [options]
 
 Options:
   -r, --region=region     Gives the ability to set a default region 

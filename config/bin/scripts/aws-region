@@ -3,8 +3,8 @@
 Mara utility to switch AWS regions.
 
 Usage:
-   region <region_name> [options]
-   region --help
+   aws-region <region_name> [options]
+   aws-region --help
 
 Options:
   -h, --help              Show this help message and exit

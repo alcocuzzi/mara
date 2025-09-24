@@ -3,7 +3,7 @@
 Mara utility to load AWS long credentials (Access Key and Secrets Access Key). 
 
 Usage:
-   login [options]
+   aws-login-iam [options]
 
 Options:
   -s, --secs=secs         The duration in seconds the credentials should remain valid [default: 10800]

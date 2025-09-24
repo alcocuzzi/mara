@@ -3,7 +3,7 @@
 Utility to execute commands on ECS tasks for a specific service.
 
 Usage:
-  ecs-execute-command --cluster=<cluster> --service=<service> [--command=<command>]
+  aws-ecs-execute-command --cluster=<cluster> --service=<service> [--command=<command>]
 
 Options:
   -c, --cluster=<cluster>    The ECS cluster name
