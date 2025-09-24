@@ -7,6 +7,8 @@ Usage:
 
 Options:
   -g, --git                  Show useful commands for git/git-cli utilities
+  -a, --ansible              Show useful commands for ansible
+  -v, --vi                   Show useful vi commands
   -h, --help                 Show this help message and exit
   --debug                    Show more verbose logging
 """
@@ -102,6 +104,104 @@ gh_commands = {
     ],
 }
 
+ansible_commands = {
+    "Inventory Configuration (hosts.ini)": [
+        {"command": "10.0.5.100 ansible_user=ec2-user ansible_ssh_private_key_file=~/.ssh/key.pem", "description": "Adding configuration to connect to the given IP as ec2-user and using keypair"},
+        {"command": "webserver ansible_host=10.0.5.100 ansible_user=ec2-user ansible_ssh_private_key_file=~/.ssh/key.pem", "description": "Adding hostname alias configuration"},
+        {"command": "10.0.5.202 ansible_user=ec2-user ansible_ssh_private_key_file=~/.ssh/key.pem ansible_connection=ssh ansible_shell_type=powershell", "description": "Adding configuration to connect to windows machine via SSH and using PowerShell"},
+        {"command": "application_server ansible_host=10.0.5.202 ansible_user=ec2-user ansible_ssh_private_key_file=~/.ssh/key.pem ansible_connection=ssh ansible_shell_type=powershell", "description": "Adding hostname alias configuration"}
+    ],
+    "Connectivity": [
+        {"command": "ansible all -m ping -i hosts.ini", "description": "Test connectivity (Linux)"},
+        {"command": "ansible windows -m win_ping -i hosts.ini", "description": "Test connectivity (Windows)"},
+        {"command": "ansible webservers -m ping -i hosts.ini", "description": "Test specific group"},
+        {"command": "ansible web1 -m ping -i hosts.ini", "description": "Test specific host"}
+    ],
+    "Ad-hoc Commands": [
+        {"command": "ansible linux -m shell -a 'uptime' -i hosts.ini", "description": "Run shell command (Linux)"},
+        {"command": "ansible windows -m win_shell -a 'Get-Service' -i hosts.ini", "description": "Run PowerShell command (Windows)"},
+        {"command": "ansible linux -m copy -a 'src=/local/file dest=/remote/file' -i hosts.ini", "description": "Copy file (Linux)"},
+        {"command": "ansible linux -m package -a 'name=nginx state=present' -i hosts.ini", "description": "Install package (Linux - yum/apt)"},
+        {"command": "ansible windows -m win_chocolatey -a 'name=notepadplusplus state=present' -i hosts.ini", "description": "Install package (Windows)"},
+        {"command": "ansible all -m setup -i hosts.ini", "description": "Gather facts"},
+        {"command": "ansible linux -m shell -a 'systemctl status nginx' -i hosts.ini --become", "description": "Run with sudo (Linux)"}
+    ],
+    "PlayBook Commands": [
+        {"command": "ansible-playbook playbook.yml -i hosts.ini", "description": "Run playbook"},
+        {"command": "ansible-playbook playbook.yml -i hosts.ini -v", "description": "Run with verbose output"},
+        {"command": "ansible-playbook playbook.yml -i hosts.ini --check", "description": "Dry run (check mode)"},
+        {"command": "ansible-playbook playbook.yml -i hosts.ini --tags 'install,config'", "description": "Run specific tags"},
+        {"command": "ansible-playbook playbook.yml -i hosts.ini --skip-tags 'restart'", "description": "Skip specific tags"},
+        {"command": "ansible-playbook playbook.yml -i hosts.ini --limit webservers", "description": "Run on specific hosts"},
+        {"command": "ansible-playbook playbook.yml -i hosts.ini --become", "description": "Run with sudo"}
+    ],
+    "Linux Modules": [
+        {"command": "ping", "description": "Test connectivity"},
+        {"command": "shell", "description": "Run shell commands"},
+        {"command": "command", "description": "Run commands (safer than shell)"},
+        {"command": "copy", "description": "Copy files"},
+        {"command": "template", "description": "Copy and process Jinja2 templates"},
+        {"command": "file", "description": "Manage files and directories"},
+        {"command": "package", "description": "Install packages (auto-detects package manager)"},
+        {"command": "yum/apt", "description": "Package managers"},
+        {"command": "service", "description": "Manage services"},
+        {"command": "user", "description": "Manage users"},
+        {"command": "cron", "description": "Manage cron jobs"},
+        {"command": "git", "description": "Git operations"},
+        {"command": "setup", "description": "Gather facts"}
+    ],
+    "Windows Modules": [
+        {"command": "win_ping", "description": "Test connectivity"},
+        {"command": "win_shell", "description": "Run PowerShell commands"},
+        {"command": "win_command", "description": "Run commands"},
+        {"command": "win_copy", "description": "Copy files"},
+        {"command": "win_template", "description": "Copy and process templates"},
+        {"command": "win_file", "description": "Manage files and directories"},
+        {"command": "win_chocolatey", "description": "Install packages via Chocolatey"},
+        {"command": "win_feature", "description": "Manage Windows features"},
+        {"command": "win_service", "description": "Manage services"},
+        {"command": "win_user", "description": "Manage users"},
+        {"command": "win_scheduled_task", "description": "Manage scheduled tasks"},
+        {"command": "win_regedit", "description": "Manage registry"},
+        {"command": "setup", "description": "Gather fact"},
+    ],
+    "Troubleshooting Playbook": [
+        {"command": "ansible-playbook playbook.yml --syntax-check", "description": "Validate playbook syntax"},
+        {"command": "ansible-playbook playbook.yml -i hosts.ini --list-tasks", "description": "List tasks that would run"},
+    ],
+    "Environment Variables": [
+        {"command": "export ANSIBLE_INVENTORY=hosts.ini", "description": "Default inventory file"},
+        {"command": "export ANSIBLE_REMOTE_USER=ec2-user", "description": "Default remote user"},
+        {"command": "export ANSIBLE_PRIVATE_KEY_FILE=~/.ssh/key.pem", "description": "Default private key"}
+    ]
+}
+
+vi_commands = {
+    "Vi Essential Commands": [
+        {"command": "gg", "description": "Go to first line of file"},
+        {"command": "G", "description": "Go to last line of file"},
+        {"command": "0", "description": "Go to beginning of current line"},
+        {"command": "$", "description": "Go to end of current line"},
+        {"command": ":wq", "description": "Save and quit"},
+        {"command": ":q!", "description": "Quit without saving"},
+        {"command": "dd", "description": "Delete entire line"},
+        {"command": "d100d", "description": "Delete 100 lines"}
+    ],
+    "Vi Visual Mode": [
+        {"command": "v", "description": "Start character visual selection mode"},
+        {"command": "V", "description": "Start line visual selection mode"},
+        {"command": "Ctrl+v", "description": "Start block visual selection mode"},
+        {"command": "d", "description": "Delete selected text (in visual mode)"},
+        {"command": "y", "description": "Copy selected text (in visual mode)"},
+    ],
+
+    "Vi Search & Navigation": [
+        {"command": "?text", "description": "Search backwards for 'text'"},
+        {"command": "N", "description": "Go to previous search result"}
+    ],
+}
+
+
 def display_commands(data):
     for category, commands in data.items():
         console.print(f"\n [bold green]{category}[/bold green]")
@@ -118,8 +218,13 @@ def main(options):
     if options.get("--git"):
         _log.info("Showing Git and GitHub CLI useful commands...")
         display_commands(gh_commands)
-    else:
-        _log.warning("No valid option provided. See --help for usage.")
+    if options.get("--ansible"):
+        _log.info("Showing Ansible useful commands...")
+    if options.get("--vi"):
+        _log.info("Showing Vi useful commands...")
+        display_commands(vi_commands)
+    if not any([options['--git'], options['--ansible'], options['--vi']]):
+        print(__doc__)
 
 
 if __name__ == "__main__":

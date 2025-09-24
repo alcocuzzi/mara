@@ -4,7 +4,7 @@ Mara utility to load Git access token from SSM Parameter store.
 Please make sure to save your access token on SSM Parameter store before using this utility.
 
 Usage:
-   load-git-credentials [options]
+   git-login [options]
 
 Options:
    -h, --help              Show this help message and exit

@@ -3,7 +3,7 @@
 Mara utility to logout AWS active session.
 
 Usage:
-   logout [options]
+   aws-logout [options]
 
 Options:
   -h, --help              Show this help message and exit
