@@ -13,8 +13,8 @@ RUN apt-get update -y && \
     apt clean && rm -rf /var/lib/apt/lists/*
 
 FROM base AS install
-ENV TF_VERSION="1.13.3"
-ENV GIT_CLI_VERSION="2.79.0"
+ENV TF_VERSION="1.14.3"
+ENV GIT_CLI_VERSION="2.83.2"
 WORKDIR /tmp
 RUN ARCH=$(uname -m) && \
     case "$ARCH" in x86_64) ARCH_SHORT=amd64; ARCH_SSM=64bit ;; aarch64) ARCH_SHORT=arm64; ARCH_SSM=arm64 ;; esac && \
@@ -59,6 +59,7 @@ RUN ARCH=$(uname -m) && \
     chmod +x /usr/local/bin/mara && \
     chown root:root /usr/local/bin/fixuid && \
     chmod 4755 /usr/local/bin/fixuid && \
+    chmod 755 /home/mara && \
     echo "alias tf=terraform"  >> /home/mara/.config/fish/config.fish && \
     echo "alias k=kubectl"  >> /home/mara/.config/fish/config.fish && \
     echo "starship init fish | source" >> /home/mara/.config/fish/config.fish && \
