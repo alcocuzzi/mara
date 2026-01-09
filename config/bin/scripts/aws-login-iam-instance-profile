@@ -1,0 +1,141 @@
+#!/usr/bin/env python3
+"""
+Mara utility to load AWS identity from IAM role at container startup.
+Uses STS and does NOT write credentials.
+"""
+
+import typer
+import logging
+from rich.logging import RichHandler
+from rich.console import Console
+from subprocess import run, CalledProcessError
+from os import environ
+from sys import exit
+import boto3
+from botocore.exceptions import ClientError, NoRegionError
+import requests
+
+
+console = Console()
+app = typer.Typer(add_completion=False)
+
+
+def setup_logging(debug: bool = False):
+    """Set up Typer/Rich logging manually."""
+    level = logging.DEBUG if debug else logging.INFO
+    logging.basicConfig(
+        level=level,
+        format="%(message)s",
+        datefmt="[%X]",
+        handlers=[RichHandler()],
+    )
+    log = logging.getLogger("rich")
+    # Silence boto3/botocore noisy logs
+    logging.getLogger("boto3").setLevel(logging.WARNING)
+    logging.getLogger("botocore").setLevel(logging.WARNING)
+    return log
+
+
+def fish_set(var: str, value: str):
+    """Set a universal Fish variable."""
+    try:
+        run(
+            f"set -Ux {var} {value}",
+            shell=True,
+            executable="/usr/bin/fish",
+            check=True,
+        )
+    except CalledProcessError as e:
+        typer.secho(f"Failed to set Fish variable {var}: {e}", fg=typer.colors.YELLOW)
+
+
+def fish_unset(var: str):
+    """Unset a universal Fish variable if it exists."""
+    try:
+        run(
+            f"set -e {var}",
+            shell=True,
+            executable="/usr/bin/fish",
+            check=True,
+        )
+    except CalledProcessError:
+        pass
+
+
+def get_region():
+    # 1. Environment variables
+    env_region = environ.get("AWS_REGION") or environ.get("AWS_DEFAULT_REGION")
+    if env_region:
+        return env_region
+
+    region = run(['aws', 'ec2', 'describe-availability-zones', '--query', 'AvailabilityZones[0].RegionName', '--output', 'text'], capture_output=True, text=True).stdout.strip()
+    if region:
+        return region
+
+    # 4. Could not detect region
+    return "unknown"
+
+
+def get_account_alias(iam):
+    """Fetch AWS account alias if available."""
+    try:
+        aliases = iam.list_account_aliases().get("AccountAliases", [])
+        return aliases[0] if aliases else None
+    except ClientError:
+        return None
+
+
+def main():
+    """Run the IAM bootstrap immediately with Rich logging."""
+    log = setup_logging(debug=False)  # Set True for debug mode
+
+    try:
+        sts = boto3.client("sts")
+        iam = boto3.client("iam")
+
+        identity = sts.get_caller_identity()
+        account_id = identity["Account"]
+        arn = identity["Arn"]
+
+        # Extract role name from ARN
+        role_name = arn.split("/")[-2] if "assumed-role" in arn else "unknown"
+
+        region = get_region()
+        account_alias = get_account_alias(iam)
+
+        console.rule("[bold green]AWS IAM Identity Loaded")
+
+        typer.secho(f"Account ID: {account_id}", fg=typer.colors.CYAN)
+        if account_alias:
+            typer.secho(f"Account Alias: {account_alias}", fg=typer.colors.CYAN)
+
+        typer.secho(f"Role: {role_name}", fg=typer.colors.CYAN)
+        typer.secho(f"Region: {region}", fg=typer.colors.CYAN)
+        console.rule()
+
+        # Clean previous Mara vars
+        fish_unset("mara_acc_number")
+        fish_unset("mara_acc_alias")
+
+        # Set Fish universal variables
+        fish_set("mara_region", region)
+        fish_set("mara_identity", role_name)
+
+        if account_alias:
+            fish_set("mara_acc_alias", account_alias)
+        else:
+            fish_set("mara_acc_number", account_id)
+
+    except NoRegionError:
+        log.error("AWS region not configured")
+        exit(1)
+    except ClientError as e:
+        log.error(f"AWS error: {e}")
+        exit(1)
+    except Exception as e:
+        log.error(f"Unexpected error: {e}")
+        exit(1)
+
+
+if __name__ == "__main__":
+    main()

@@ -48,7 +48,7 @@ RUN ARCH=$(uname -m) && \
     usermod -u $UID $USER && groupmod -g $GID $GROUP && \
     echo "mara ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers && \
     curl -SsL https://github.com/boxboat/fixuid/releases/download/v0.6.0/fixuid-0.6.0-linux-${ARCH_SHORT}.tar.gz | tar -C /usr/local/bin -xzf - && \
-    mkdir -p /app/scripts /home/mara/.aws /etc/fixuid /home/mara/.config /home/mara/.config/fish/functions && \
+    mkdir -p /app/scripts /home/mara/.aws /etc/fixuid /home/mara/.config /home/mara/.config/fish/functions /home/mara/.config/fish/conf.d && \
     cp -R /tmp/bin/mara /usr/local/bin/mara && \
     cp -R /tmp/bin/scripts/* /app/scripts/ && \
     mv /tmp/etc/fixuid/config.yml /etc/fixuid/config.yml && \
@@ -66,4 +66,4 @@ RUN ARCH=$(uname -m) && \
     rm -rf /tmp/*
 USER mara
 WORKDIR /home/mara
-ENTRYPOINT [ "fixuid", "-q", "/usr/bin/fish" ]
+ENTRYPOINT [ "fixuid", "-q", "/usr/bin/fish", "-c", "/app/scripts/aws-login-iam-instance-profile; exec /usr/bin/fish" ]
