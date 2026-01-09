@@ -1,38 +1,33 @@
 #!/usr/bin/env python3
 """
 Mara utility to display installed tools loaded from docker build environment variables.
-
-Usage:
-  tools [options]
-
-Options:
-  -h, --help     Show this help message and exit
-  --debug        Show more verbose logging
 """
 
 import os
-import sys
-from logging import basicConfig, getLogger, DEBUG, INFO
+import typer
 from rich.console import Console
-from rich.logging import RichHandler
 from tabulate import tabulate
-import docopt
 
-# Logging configuration
-FORMAT = "%(message)s"
-basicConfig(
-    format=FORMAT,
-    datefmt="[%X]",
-    handlers=[RichHandler()],
-    level=INFO,
+app = typer.Typer(
+    help="Mara utility to display installed tools from Docker build environment variables."
 )
-_log = getLogger("rich")
+
 console = Console()
 
-def display_tools():
+
+def show_tools(debug: bool = False) -> None:
+    """Display installed tools grouped by classification."""
+    if debug:
+        typer.echo("Reading tool definitions from environment variables", err=True)
+
     os_tools = sorted(os.getenv("OS_TOOLS", "").split())
     py_tools = sorted(os.getenv("PY_TOOLS", "").split())
     cli_tools = sorted(os.getenv("CLI_TOOLS", "").replace(",", "").split())
+
+    if debug:
+        typer.echo(f"OS_TOOLS: {len(os_tools)} entries", err=True)
+        typer.echo(f"PY_TOOLS: {len(py_tools)} entries", err=True)
+        typer.echo(f"CLI_TOOLS: {len(cli_tools)} entries", err=True)
 
     data = [
         ["OS_TOOLS", " ".join(os_tools)],
@@ -40,20 +35,34 @@ def display_tools():
         ["CLI_TOOLS", " ".join(cli_tools)],
     ]
 
-    console.print(tabulate(data, headers=["Classification", "Tool name"], tablefmt="rounded_grid"))
+    console.print(
+        tabulate(
+            data,
+            headers=["Classification", "Tool name"],
+            tablefmt="rounded_grid",
+        )
+    )
 
-def main(options):
-    if options["--debug"]:
-        _log.setLevel(DEBUG)
-        _log.debug("Debug mode enabled")
-        for key, value in options.items():
-            _log.debug(f"{key}: {value}")
 
-    display_tools()
+@app.command()
+def main(
+    debug: bool = typer.Option(
+        False,
+        "--debug",
+        help="Show more verbose logging",
+    ),
+):
+    """
+    Display installed tools.
+
+    This utility reads tool definitions injected at Docker build time
+    via environment variables and displays them in a readable table.
+    """
+    if debug:
+        typer.echo("Debug mode enabled", err=True)
+
+    show_tools(debug)
+
 
 if __name__ == "__main__":
-    try:
-        options = docopt.docopt(__doc__)
-        main(options)
-    except docopt.DocoptExit:
-        sys.exit(1)
+    app()

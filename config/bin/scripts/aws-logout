@@ -1,80 +1,108 @@
 #!/usr/bin/env python3
 """
 Mara utility to logout AWS active session.
-
-Usage:
-   aws-logout [options]
-
-Options:
-  -h, --help              Show this help message and exit
-  --debug                 Show more verbose logging
 """
 
-# Library to exit when facing errors
-from sys import exit
-# Library to set log levels
-from logging import basicConfig, getLogger, INFO, WARNING
-from rich.console import Console
-from rich.logging import RichHandler
-# Library to have command line options
-import docopt
-from subprocess import run, check_output, CalledProcessError, DEVNULL
-from os import environ
+import typer
+from subprocess import run, CalledProcessError
+from os import environ, path
+import logging
 
-# Logging configuration
-FORMAT = "%(message)s"
-basicConfig(
-    format=FORMAT, datefmt="[%X]", handlers=[RichHandler()], level=INFO,
-)
-_log = getLogger("rich")
-console = Console()
+app = typer.Typer(help="Mara utility to logout AWS active session.")
 
-# Suppress boto3/botocore logging to avoid message `Found credentials in shared credentials file: ~/.aws/credentials`
-getLogger('boto3').setLevel(WARNING)
-getLogger('botocore').setLevel(WARNING)
+# Suppress boto3/botocore noise if they are present in the environment
+logging.getLogger("boto3").setLevel(logging.WARNING)
+logging.getLogger("botocore").setLevel(logging.WARNING)
 
 
-def logout():
-  home_dir = environ['HOME']
-  try:
-    with open(f"{home_dir}/.aws/credentials") as creds_file:
-      if "aws_access_key_id" in creds_file.read():    
-        open(f"{home_dir}/.aws/credentials", 'w').close()
-        open(f"{home_dir}/.aws/config", 'w').close()
+def logout(debug: bool = False) -> None:
+    """Logout from AWS by clearing credentials and related environment variables."""
+    home_dir = environ.get("HOME")
 
-        variables_to_remove = ['mara_acc_number', 'mara_acc_alias', 'mara_identity', 'mara_region']
-  
+    if not home_dir:
+        typer.secho("HOME environment variable not set", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1)
+
+    credentials_path = path.join(home_dir, ".aws", "credentials")
+    config_path = path.join(home_dir, ".aws", "config")
+
+    try:
+        if debug:
+            typer.echo(f"Checking AWS credentials at {credentials_path}", err=True)
+
+        with open(credentials_path) as creds_file:
+            content = creds_file.read()
+
+        if "aws_access_key_id" not in content:
+            typer.secho(
+                "This command requires you to login on AWS first",
+                fg=typer.colors.RED,
+                err=True,
+            )
+            raise typer.Exit(code=0)
+
+        # Clear credentials and config
+        open(credentials_path, "w").close()
+        open(config_path, "w").close()
+
+        if debug:
+            typer.echo("Cleared AWS credentials and config files", err=True)
+
+        variables_to_remove = [
+            "mara_acc_number",
+            "mara_acc_alias",
+            "mara_identity",
+            "mara_region",
+        ]
+
         for variable in variables_to_remove:
-          try:
-            env_variable = run(f"printenv | grep '{variable}'", shell=True, executable="/usr/bin/fish", check=True, capture_output=True).stdout.strip()
-    
-            if env_variable:
-              run(f"set -e {variable}", shell=True, executable="/usr/bin/fish", check=True)
-      
-          except CalledProcessError:
-            pass
-      
-      else:
-        _log.error("This command requires you to login on AWS first")
-        exit(0)
-    
-  except IOError:
-    _log.error("This command requires you to login on AWS first")
-    exit(0)
+            try:
+                if debug:
+                    typer.echo(f"Removing Fish env var: {variable}", err=True)
+
+                run(
+                    f"set -e {variable}",
+                    shell=True,
+                    executable="/usr/bin/fish",
+                    check=True,
+                )
+            except CalledProcessError:
+                if debug:
+                    typer.echo(
+                        f"Env var {variable} not set or could not be removed",
+                        err=True,
+                    )
+
+        typer.secho("AWS session successfully logged out", fg=typer.colors.GREEN)
+
+    except FileNotFoundError:
+        typer.secho(
+            "This command requires you to login on AWS first",
+            fg=typer.colors.RED,
+            err=True,
+        )
+        raise typer.Exit(code=0)
 
 
-# Main function
-def main(options):
-   if options["--debug"]:
-      for key, value in options.items():
-         _log.debug("command-line options: {}: {}".format(key, value))
+@app.command()
+def main(
+    debug: bool = typer.Option(
+        False,
+        "--debug",
+        help="Show more verbose logging",
+    ),
+):
+    """
+    Logout AWS active session.
 
-   logout()
-    
+    This utility clears AWS credentials files and removes
+    Mara-related AWS environment variables from the Fish shell.
+    """
+    if debug:
+        typer.echo("Debug mode enabled", err=True)
+
+    logout(debug)
+
+
 if __name__ == "__main__":
-   try:
-      options = docopt.docopt(__doc__)
-      main(options)
-
-   except docopt.DocoptExit:
-      exit(__doc__)
+    app()
