@@ -1,64 +1,69 @@
 #!/usr/bin/env python3
 """
 Mara utility to help you find the available Mara commands.
-
-Usage:
-   help [options]
-
-Options:
-   -h, --help              Show this help message and exit
-   --debug                 Show more verbose logging
 """
-
 import sys
 import subprocess
-from logging import basicConfig, getLogger, INFO, DEBUG
-from rich.console import Console
-from rich.logging import RichHandler
-import docopt
+import typer
 
-# Logging configuration
-FORMAT = "%(message)s"
-basicConfig(
-    format=FORMAT,
-    datefmt="[%X]",
-    handlers=[RichHandler()],
-    level=INFO,
-)
-_log = getLogger("rich")
-console = Console()
+app = typer.Typer(help="Mara utility to help you find the available Mara commands.")
 
 # ANSI 24-bit color codes
 HEADER_COLOR = "\033[38;2;96;125;59m"     # #607D3B
 COMMAND_COLOR = "\033[38;2;185;192;188m"  # #B9C0BC
+RESET_COLOR = "\033[0m"
 
-def show_available_commands():
+
+def show_available_commands(debug: bool = False):
+    """Display all available Mara commands."""
     try:
-        available_commands = subprocess.run(['ls', '/app/scripts/'], capture_output=True, text=True, check=True)
+        if debug:
+            typer.echo("Listing commands from /app/scripts/", err=True)
+        
+        result = subprocess.run(
+            ['ls', '/app/scripts/'],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        
+        commands = result.stdout.splitlines()
+        
+        if debug:
+            typer.echo(f"Found {len(commands)} commands", err=True)
+        
+        # Display header
+        print(f"{HEADER_COLOR}╭─────────────────────────────────────────────────╮")
+        print(f"{HEADER_COLOR}│    ↓ ↓     Available Mara Commands     ↓ ↓      │")
+        print(f"{HEADER_COLOR}╰─────────────────────────────────────────────────╯{RESET_COLOR}\n")
+        
+        # Display commands
+        for i, command in enumerate(commands, 1):
+            print(f"{COMMAND_COLOR}{i} ❯ {command}{RESET_COLOR}")
+        
     except subprocess.CalledProcessError as e:
-        _log.error("Failed to list available commands: %s", e)
-        sys.exit(1)
+        typer.secho(f"Failed to list available commands: {e}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1)
+    except FileNotFoundError:
+        typer.secho("Error: /app/scripts/ directory not found", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1)
 
-    print(f"{HEADER_COLOR}╭─────────────────────────────────────────────────╮")
-    print(f"{HEADER_COLOR}│    ↓ ↓     Available Mara Commands     ↓ ↓      │")
-    print(f"{HEADER_COLOR}╰─────────────────────────────────────────────────╯\n")
 
-    for i, command in enumerate(available_commands.stdout.splitlines(), 1):
-        print(f"{COMMAND_COLOR}{i} ❯ {command}")
+@app.command()
+def main(
+    debug: bool = typer.Option(False, "--debug", help="Show more verbose logging"),
+):
+    """
+    Display all available Mara commands.
+    
+    This utility lists all commands available in the Mara toolkit
+    by reading the /app/scripts/ directory.
+    """
+    if debug:
+        typer.echo("Debug mode enabled", err=True)
+    
+    show_available_commands(debug)
 
-def main(options):
-    if options["--debug"]:
-        _log.setLevel(DEBUG)
-        _log.debug("Debug mode enabled.")
-        for key, value in options.items():
-            _log.debug(f"{key}: {value}")
-
-    if len(sys.argv) == 1:
-        show_available_commands()
 
 if __name__ == "__main__":
-    try:
-        options = docopt.docopt(__doc__)
-        main(options)
-    except docopt.DocoptExit:
-        show_available_commands()
+    app()

@@ -1,174 +1,215 @@
 #!/usr/bin/env python3
 """
 Mara utility to load short-term AWS SSO credentials.
-
-Usage:
-  aws-login-sso [options]
-
-Options:
-  -r, --region=region     Gives the ability to set a default region 
-                          for the credentials profile [default: eu-west-1]
-  -h, --help              Show this help message and exit
-  --debug                 Show more verbose logging
 """
 
-
-## Library to parse credentials content to the files
+import typer
 import configparser
-# Library to exit when facing errors
-from sys import exit
-# Library to set log levels
-from logging import basicConfig, getLogger, INFO, WARNING
-from rich.console import Console
-from rich.logging import RichHandler
-# Library to have command line options
-import docopt
+from os import environ, path
+from subprocess import run, CalledProcessError
 from boto3 import client
 from botocore.exceptions import ClientError
-from subprocess import run, CalledProcessError
-from os import environ
+import logging
+
+app = typer.Typer(help="Mara utility to load short-term AWS SSO credentials.")
+
+# Silence boto noise
+logging.getLogger("boto3").setLevel(logging.WARNING)
+logging.getLogger("botocore").setLevel(logging.WARNING)
 
 
-# Logging configuration
-FORMAT = "%(message)s"
-basicConfig(
-    format=FORMAT, datefmt="[%X]", handlers=[RichHandler()], level=INFO,
-)
-_log = getLogger("rich")
-console = Console()
+def load_credentials(region: str, debug: bool = False) -> None:
+    """Prompt user to paste AWS SSO credentials and store them locally."""
+    typer.echo(
+        "╭─────────────────────────────────────────────────────────────────────────────────────────────────────╮"
+    )
+    typer.echo(
+        "│                   ↓ ↓     Paste your AWS SSO credentials below     ↓ ↓                              │"
+    )
+    typer.echo(
+        "│                 When you're done, press Enter twice to save and continue.                           │"
+    )
+    typer.echo(
+        "╰─────────────────────────────────────────────────────────────────────────────────────────────────────╯\n"
+    )
 
-# Suppress boto3/botocore logging to avoid message `Found credentials in shared credentials file: ~/.aws/credentials`
-getLogger('boto3').setLevel(WARNING)
-getLogger('botocore').setLevel(WARNING)
+    credentials: dict[str, str] = {}
+
+    while True:
+        try:
+            line = input()
+        except KeyboardInterrupt:
+            raise typer.Exit(code=0)
+
+        if not line:
+            break
+
+        line = line.strip()
+
+        try:
+            if line.startswith("export"):
+                line = line.replace("export", "").replace('"', "")
+            elif line.startswith("SET"):
+                line = line.replace("SET", "").replace('"', "")
+            elif line.startswith("$Env:"):
+                line = line.replace("$Env:", "").replace('"', "")
+            elif line.startswith("AWS"):
+                pass
+            else:
+                raise ValueError
+
+            key, value = line.split("=", 1)
+            credentials[key.strip()] = value.strip()
+
+        except ValueError:
+            typer.secho(
+                "Whoops! Looks like the AWS SSO credentials were pasted in the wrong format.\n"
+                "Please copy and paste them exactly as shown in the SSO console snippet.",
+                fg=typer.colors.RED,
+                err=True,
+            )
+            raise typer.Exit(code=1)
+
+    if not credentials:
+        typer.secho("No credentials provided", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1)
+
+    access_key = credentials.get("AWS_ACCESS_KEY_ID")
+    secret_key = credentials.get("AWS_SECRET_ACCESS_KEY")
+    session_token = credentials.get("AWS_SESSION_TOKEN")
+
+    if debug:
+        typer.echo(f"AWS_ACCESS_KEY_ID: {access_key[:20]}", err=True)
+        typer.echo(f"AWS_SECRET_ACCESS_KEY: {secret_key[:20]}", err=True)
+        typer.echo(f"AWS_SESSION_TOKEN: {session_token[:20]}", err=True)
+
+    store_credentials(access_key, secret_key, session_token, region, debug)
 
 
-# Load credentials function
-def load_credentials():
-   print("╭─────────────────────────────────────────────────────────────────────────────────────────────────────╮")
-   print("│                   ↓ ↓     Paste your AWS SSO credentials below     ↓ ↓                              │")
-   print("│                 When you're done, press Enter twice to save and continue.                           │")
-   print("╰─────────────────────────────────────────────────────────────────────────────────────────────────────╯\n")
+def store_credentials(
+    access_key: str,
+    secret_key: str,
+    session_token: str,
+    region: str,
+    debug: bool = False,
+) -> None:
+    """Store AWS credentials, configure region, and update Fish env vars."""
+    home_dir = environ.get("HOME")
 
-   credentials = {}
-   while True:
-      try:
-         line = input()
-      except KeyboardInterrupt:
-         exit(0)
-      if not line:
-         break
-      line = line.strip()
+    if not home_dir:
+        typer.secho("HOME environment variable not set", fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1)
 
-      if line.startswith("export"):
-         line = line.replace('export', '').replace('"', '')
-         key, value = line.split("=", 1)
-         credentials[key.strip()] = value.strip()
-      elif line.startswith("SET"):
-         line = line.replace('SET', '').replace('"', '')
-         key, value = line.split("=", 1)
-         credentials[key.strip()] = value.strip()
-      elif line.startswith("$Env:"):
-         line = line.replace('$Env:', '').replace('"', '')
-         key, value = line.split("=", 1)
-         credentials[key.strip()] = value.strip()
-      elif line.startswith("AWS"):
-         key, value = line.split("=", 1)
-         credentials[key.strip()] = value.strip()
-      else:
-         _log.warning("Whoops! Looks like the AWS SSO credentials were pasted in wrong format. Please try again by copying and pasting them as from SSO console snippet.")
-         exit(0)
+    credentials_path = path.join(home_dir, ".aws", "credentials")
+    config_path = path.join(home_dir, ".aws", "config")
 
-   if credentials:
-      aws_access_key_id = credentials.get("AWS_ACCESS_KEY_ID")
-      _log.info("AWS_ACCESS_KEY_ID: %s", aws_access_key_id[:20])
-      aws_secret_access_key = credentials.get("AWS_SECRET_ACCESS_KEY")
-      _log.info("AWS_SECRET_ACCESS_KEY: %s", aws_secret_access_key[:20])
-      aws_session_token = credentials.get("AWS_SESSION_TOKEN")
-      _log.info("AWS_SESSION_TOKEN: %s", aws_session_token[:20])
-      
-      store_credentials(aws_access_key_id, aws_secret_access_key, aws_session_token)
+    # Write credentials
+    config = configparser.ConfigParser()
+    config.read(credentials_path)
 
-# Parse credentials function
-def store_credentials(access_key_id, secret_access_key, session_token):
-# Set the credentials
-   home_dir = environ['HOME']
-   config = configparser.ConfigParser()
-   config.read(f"{home_dir}/.aws/credentials")
-   if not config.has_section("default"):
-      config.add_section("default")
-   config.set("default", "aws_access_key_id", access_key_id)
-   config.set("default", "aws_secret_access_key", secret_access_key)
-   config.set("default", "aws_session_token", session_token)
-   with open(f"{home_dir}/.aws/credentials", "w") as credentials_file:
-      config.write(credentials_file)
+    if not config.has_section("default"):
+        config.add_section("default")
 
-# Set the region
-   config_region = configparser.ConfigParser()
-   config_region.read(f"{home_dir}/.aws/config")
-   if not config_region.has_section("default"):
-      config_region.add_section("default")
-   config_region.set("default", "region", options["--region"])
-   _log.info("AWS_REGION: %s", options["--region"])
-   config_region.set("default", "output", "json")
-   with open(f"{home_dir}/.aws/config", "w") as config_region_file:
-      config_region.write(config_region_file)
+    config.set("default", "aws_access_key_id", access_key)
+    config.set("default", "aws_secret_access_key", secret_key)
+    config.set("default", "aws_session_token", session_token)
 
-   try:
-      account_info = client('sts').get_caller_identity()
-      identity = account_info['Arn'].split('/')[-1]
-      acc_number = account_info["Account"]
-  
-      try:
-         acc_alias = client('iam').list_account_aliases()['AccountAliases'][0]
-      
-      except IndexError:
-         acc_alias = ""
-         _log.info("This account does not have an alias. Let's use the account number instead")
+    with open(credentials_path, "w") as f:
+        config.write(f)
 
-   except ClientError as e:
-      _log.error(e)
-      exit(1)
-  
-   try:
-      remove_acc_number = run("printenv | grep 'mara_acc_number'", shell=True, executable="/usr/bin/fish", check=True, capture_output=True).stdout.strip()
+    # Write region config
+    region_config = configparser.ConfigParser()
+    region_config.read(config_path)
 
-      if remove_acc_number:
-         run("set -e mara_acc_number", shell=True, executable="/usr/bin/fish", check=True)
+    if not region_config.has_section("default"):
+        region_config.add_section("default")
 
-   except CalledProcessError:
-      pass
-   
-   try:
-      remove_acc_alias = run("printenv | grep 'mara_acc_alias'", shell=True, executable="/usr/bin/fish", check=True, capture_output=True).stdout.strip()
-      
-      if remove_acc_alias:
-         run("set -e mara_acc_alias", shell=True, executable="/usr/bin/fish", check=True)
-   
-   except CalledProcessError:
-      pass
+    region_config.set("default", "region", region)
+    region_config.set("default", "output", "json")
 
-### Setting current account information in the prompt  
-   run("set -Ux mara_region " + options["--region"], shell=True, executable="/usr/bin/fish", check=True)
-   run("set -Ux mara_identity " + identity, shell=True, executable="/usr/bin/fish", check=True)   
-   if acc_alias:
-      run("set -Ux mara_acc_alias " + acc_alias, shell=True, executable="/usr/bin/fish", check=True)
-  
-   else:  
-      run("set -Ux mara_acc_number " + acc_number, shell=True, executable="/usr/bin/fish", check=True)
-   
-    
-# Main function
-def main(options):
-   if options["--debug"]:
-      for key, value in options.items():
-         _log.debug("command-line options: {}: {}".format(key, value))
+    with open(config_path, "w") as f:
+        region_config.write(f)
 
-   load_credentials()
+    if debug:
+        typer.echo(f"AWS region set to {region}", err=True)
+
+    # Fetch account info
+    try:
+        sts = client("sts")
+        identity_info = sts.get_caller_identity()
+        identity = identity_info["Arn"].split("/")[-1]
+        acc_number = identity_info["Account"]
+
+        try:
+            acc_alias = client("iam").list_account_aliases()["AccountAliases"][0]
+        except IndexError:
+            acc_alias = ""
+            if debug:
+                typer.echo("Account has no alias, using account number", err=True)
+
+    except ClientError as e:
+        typer.secho(str(e), fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1)
+
+    # Clean existing Fish vars
+    for var in ("mara_acc_number", "mara_acc_alias"):
+        try:
+            run(
+                f"set -e {var}",
+                shell=True,
+                executable="/usr/bin/fish",
+                check=True,
+            )
+        except CalledProcessError:
+            pass
+
+    # Set Fish vars
+    run(f"set -Ux mara_region {region}", shell=True, executable="/usr/bin/fish", check=True)
+    run(f"set -Ux mara_identity {identity}", shell=True, executable="/usr/bin/fish", check=True)
+
+    if acc_alias:
+        run(
+            f"set -Ux mara_acc_alias {acc_alias}",
+            shell=True,
+            executable="/usr/bin/fish",
+            check=True,
+        )
+    else:
+        run(
+            f"set -Ux mara_acc_number {acc_number}",
+            shell=True,
+            executable="/usr/bin/fish",
+            check=True,
+        )
+
+    typer.secho("AWS SSO credentials successfully loaded", fg=typer.colors.GREEN)
+
+
+@app.command()
+def main(
+    region: str = typer.Option(
+        "eu-west-1",
+        "--region",
+        "-r",
+        help="Default AWS region for the credentials profile",
+    ),
+    debug: bool = typer.Option(
+        False,
+        "--debug",
+        help="Show more verbose logging",
+    ),
+):
+    """
+    Load short-term AWS SSO credentials.
+
+    Paste credentials copied from the AWS SSO console and this utility
+    will configure your local AWS CLI and shell environment.
+    """
+    if debug:
+        typer.echo("Debug mode enabled", err=True)
+
+    load_credentials(region, debug)
+
 
 if __name__ == "__main__":
-   try:
-      options = docopt.docopt(__doc__)
-      main(options)
-
-   except docopt.DocoptExit:
-      exit(__doc__)
+    app()

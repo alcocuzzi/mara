@@ -1,32 +1,15 @@
 #!/usr/bin/env python3
 """
 Utility to display useful cheat-sheet commands from useful tools.
-
-Usage:
-  cheat-sheet [options]
-
-Options:
-  -g, --git                  Show useful commands for git/git-cli utilities
-  -a, --ansible              Show useful commands for ansible
-  -v, --vi                   Show useful vi commands
-  -h, --help                 Show this help message and exit
-  --debug                    Show more verbose logging
 """
 
 from tabulate import tabulate
-import docopt
-from logging import basicConfig, getLogger, INFO, DEBUG
 from rich.console import Console
-from rich.logging import RichHandler
-import sys
+import typer
 
-# Logging configuration
-FORMAT = "%(message)s"
-basicConfig(
-    format=FORMAT, datefmt="[%X]", handlers=[RichHandler()], level=INFO,
-)
-_log = getLogger("rich")
 console = Console()
+
+app = typer.Typer(help="Display useful cheat-sheet commands from useful tools.")
 
 gh_commands = {
     "Core Workflow": [
@@ -201,6 +184,58 @@ vi_commands = {
     ],
 }
 
+linux_commands = {
+    "Disk Usage & Management": [
+        {"command": "df -h", "description": "Show disk space usage in human-readable format"},
+        {"command": "du -sh /path/to/dir", "description": "Show total size of a directory"},
+        {"command": "du -h --max-depth=1 | sort -hr", "description": "Show directory sizes sorted by size"}
+    ],
+    "CPU & Process Management": [
+        {"command": "top", "description": "Real-time process viewer"},
+        {"command": "ps aux --sort=-%mem | head -10", "description": "Top 10 processes by memory usage"},
+        {"command": "ps aux --sort=-%cpu | head -10", "description": "Top 10 processes by CPU usage"},
+        {"command": "lscpu", "description": "Display CPU architecture information"},
+        {"command": "nproc", "description": "Show number of CPU cores"},
+        {"command": "uptime", "description": "Show system uptime and load average"},
+        {"command": "kill -9 <pid>", "description": "Force kill a process by PID"}
+    ],
+    "Memory Usage": [
+        {"command": "free -h", "description": "Show memory usage in human-readable format"},
+        {"command": "vmstat 1", "description": "Show virtual memory statistics every second"},
+        {"command": "cat /proc/meminfo", "description": "Detailed memory information"}
+    ],
+    "Directory & File Management": [
+        {"command": "find /path -name '*.log' -mtime +30 -delete", "description": "Find and delete log files older than 30 days"},
+        {"command": "find . -type f -size +100M", "description": "Find files larger than 100MB"},
+        {"command": "tar -czf archive.tar.gz /path/to/dir", "description": "Create compressed tar archive"},
+        {"command": "tar -xzf archive.tar.gz -C /destination", "description": "Extract tar.gz archive to destination"},
+        {"command": "ls -lhS", "description": "List files sorted by size"},
+        {"command": "chmod +x script.sh", "description": "Make file executable"},
+        {"command": "chown -R user:group /path", "description": "Change ownership recursively"},
+        {"command": "scp -r -i ~/.ssh/keypair.pem /path/to/dir username@IP:/destination/", "description": "Copy files from origin to destination"}
+    ],
+    "Networking": [
+        {"command": "ss -tunlp", "description": "Show listening ports and processes"},
+        {"command": "netstat -tunlp", "description": "Show network connections (older alternative to ss)"},
+        {"command": "ping -c 4 8.8.8.8", "description": "Send 4 ping packets"},
+        {"command": "traceroute example.com", "description": "Trace route to destination"},
+        {"command": "nslookup example.com", "description": "DNS lookup"},
+        {"command": "dig example.com +short", "description": "Quick DNS query"},
+        {"command": "iptables -L -n -v", "description": "List firewall rules with packet counts"},
+        {"command": "tcpdump -i eth0 port 80", "description": "Capture packets on port 80"},
+    ],
+    "System Info & Logs": [
+        {"command": "uname -a", "description": "Show system information"},
+        {"command": "hostnamectl", "description": "Show hostname and system info"},
+        {"command": "dmesg | tail -50", "description": "Show last 50 kernel messages"},
+        {"command": "journalctl -xe", "description": "Show systemd logs with explanations"},
+        {"command": "journalctl -u nginx -f", "description": "Follow logs for nginx service"},
+        {"command": "tail -f /var/log/syslog", "description": "Follow system log in real-time"},
+        {"command": "last -10", "description": "Show last 10 logins"},
+        {"command": "who", "description": "Show currently logged in users"},
+    ],
+}
+
 
 def display_commands(data):
     for category, commands in data.items():
@@ -208,29 +243,41 @@ def display_commands(data):
         table = [[cmd["command"], cmd["description"]] for cmd in commands]
         console.print(tabulate(table, headers=["Command", "Description"], tablefmt="rounded_grid"))
 
-def main(options):
-    if options.get("--debug"):
-        _log.setLevel(DEBUG)
-        _log.debug("Debug mode enabled")
-        for key, value in options.items():
-            _log.debug(f"{key}: {value}")
 
-    if options.get("--git"):
-        _log.info("Showing Git and GitHub CLI useful commands...")
+@app.command()
+def main(
+    git: bool = typer.Option(False, "--git", "-g", help="Show useful commands for git/git-cli utilities"),
+    ansible: bool = typer.Option(False, "--ansible", "-a", help="Show useful commands for ansible"),
+    vi: bool = typer.Option(False, "--vi", "-v", help="Show useful vi commands"),
+    linux: bool = typer.Option(False, "--linux", "-l", help="Show useful Linux system commands"),
+    debug: bool = typer.Option(False, "--debug", help="Show more verbose logging"),
+):
+    """
+    Display useful cheat-sheet commands from useful tools.
+    """
+    if debug:
+        typer.echo("Debug mode enabled", err=True)
+        typer.echo(f"git: {git}, ansible: {ansible}, vi: {vi}, linux: {linux}, debug: {debug}", err=True)
+
+    if git:
+        if debug:
+            typer.echo("Showing Git and GitHub CLI useful commands...", err=True)
         display_commands(gh_commands)
-    if options.get("--ansible"):
-        _log.info("Showing Ansible useful commands...")
+    if ansible:
+        if debug:
+            typer.echo("Showing Ansible useful commands...", err=True)
         display_commands(ansible_commands)
-    if options.get("--vi"):
-        _log.info("Showing Vi useful commands...")
+    if vi:
+        if debug:
+            typer.echo("Showing Vi useful commands...", err=True)
         display_commands(vi_commands)
-    if not any([options['--git'], options['--ansible'], options['--vi']]):
-        print(__doc__)
+    if linux:
+        if debug:
+            typer.echo("Showing Linux system commands...", err=True)
+        display_commands(linux_commands)
+    if not any([git, ansible, vi, linux]):
+        typer.secho("No option selected. Use --help to see available options.", fg=typer.colors.YELLOW)
 
 
 if __name__ == "__main__":
-    try:
-        options = docopt.docopt(__doc__)
-        main(options)
-    except docopt.DocoptExit:
-        sys.exit(1)
+    app()
