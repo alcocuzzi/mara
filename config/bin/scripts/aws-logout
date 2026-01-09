@@ -2,7 +2,6 @@
 """
 Mara utility to logout AWS active session.
 """
-
 import typer
 from subprocess import run, CalledProcessError
 from os import environ, path
@@ -18,70 +17,75 @@ logging.getLogger("botocore").setLevel(logging.WARNING)
 def logout(debug: bool = False) -> None:
     """Logout from AWS by clearing credentials and related environment variables."""
     home_dir = environ.get("HOME")
-
     if not home_dir:
         typer.secho("HOME environment variable not set", fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1)
-
+    
     credentials_path = path.join(home_dir, ".aws", "credentials")
     config_path = path.join(home_dir, ".aws", "config")
-
+    
+    # Track if we actually logged out
+    was_logged_in = False
+    
+    # Clear credentials and config if they exist
     try:
         if debug:
             typer.echo(f"Checking AWS credentials at {credentials_path}", err=True)
-
-        with open(credentials_path) as creds_file:
-            content = creds_file.read()
-
-        if "aws_access_key_id" not in content:
-            typer.secho(
-                "This command requires you to login on AWS first",
-                fg=typer.colors.RED,
-                err=True,
-            )
-            raise typer.Exit(code=0)
-
-        # Clear credentials and config
-        open(credentials_path, "w").close()
-        open(config_path, "w").close()
-
+        
+        if path.exists(credentials_path):
+            with open(credentials_path) as creds_file:
+                content = creds_file.read()
+                if "aws_access_key_id" in content:
+                    was_logged_in = True
+                    # Clear credentials
+                    open(credentials_path, "w").close()
+                    if debug:
+                        typer.echo("Cleared AWS credentials file", err=True)
+        
+        if path.exists(config_path):
+            open(config_path, "w").close()
+            if debug:
+                typer.echo("Cleared AWS config file", err=True)
+    
+    except Exception as e:
         if debug:
-            typer.echo("Cleared AWS credentials and config files", err=True)
-
-        variables_to_remove = [
-            "mara_acc_number",
-            "mara_acc_alias",
-            "mara_identity",
-            "mara_region",
-        ]
-
-        for variable in variables_to_remove:
-            try:
-                if debug:
-                    typer.echo(f"Removing Fish env var: {variable}", err=True)
-
-                run(
-                    f"set -e {variable}",
-                    shell=True,
-                    executable="/usr/bin/fish",
-                    check=True,
+            typer.echo(f"Error clearing credential files: {e}", err=True)
+    
+    # Clean up environment variables set by bootstrap script
+    variables_to_remove = [
+        "mara_acc_number",
+        "mara_acc_alias",
+        "mara_identity",
+        "mara_region",
+    ]
+    
+    removed_count = 0
+    for variable in variables_to_remove:
+        try:
+            if debug:
+                typer.echo(f"Removing Fish env var: {variable}", err=True)
+            run(
+                f"set -e {variable}",
+                shell=True,
+                executable="/usr/bin/fish",
+                check=True,
+            )
+            removed_count += 1
+        except CalledProcessError:
+            if debug:
+                typer.echo(
+                    f"Env var {variable} not set or could not be removed",
+                    err=True,
                 )
-            except CalledProcessError:
-                if debug:
-                    typer.echo(
-                        f"Env var {variable} not set or could not be removed",
-                        err=True,
-                    )
-
+    
+    # Inform user about what was cleaned up
+    if was_logged_in or removed_count > 0:
         typer.secho("AWS session successfully logged out", fg=typer.colors.GREEN)
-
-    except FileNotFoundError:
+    else:
         typer.secho(
-            "This command requires you to login on AWS first",
-            fg=typer.colors.RED,
-            err=True,
+            "No active AWS session found to logout",
+            fg=typer.colors.YELLOW,
         )
-        raise typer.Exit(code=0)
 
 
 @app.command()
@@ -94,13 +98,12 @@ def main(
 ):
     """
     Logout AWS active session.
-
+    
     This utility clears AWS credentials files and removes
     Mara-related AWS environment variables from the Fish shell.
     """
     if debug:
         typer.echo("Debug mode enabled", err=True)
-
     logout(debug)
 
 
