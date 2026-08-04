@@ -13,8 +13,8 @@ from os import environ
 from sys import exit
 import boto3
 from botocore.exceptions import ClientError, NoRegionError
-import requests
-
+import urllib3
+from urllib3 import connection
 
 console = Console()
 app = typer.Typer(add_completion=False)
@@ -88,11 +88,52 @@ def get_account_alias(iam):
 def main():
     """Run the IAM bootstrap immediately with Rich logging."""
     log = setup_logging(debug=False)  # Set True for debug mode
-
+    # Check if its running on EC2 instance, otherwise do not run
     try:
+        http = urllib3.PoolManager(timeout=urllib3.Timeout(connect=0.5, read=0.7))
+
+        INSTANCE_ID_URL = "http://169.254.169.254/latest/meta-data/instance-id"
+        TOKEN_URL = "http://169.254.169.254/latest/api/token"
+
+        instance_id = None
+
+        # Try IMDSv2 first
+        try:
+            token_resp = http.request(
+                "PUT",
+                TOKEN_URL,
+                headers={"X-aws-ec2-metadata-token-ttl-seconds": "21600"},
+                retries=False,
+            )
+            if token_resp.status == 200:
+                token = token_resp.data.decode()
+                resp = http.request(
+                    "GET",
+                    INSTANCE_ID_URL,
+                    headers={"X-aws-ec2-metadata-token": token},
+                    retries=False,
+                )
+                if resp.status == 200:
+                    instance_id = resp.data.decode()
+        except urllib3.exceptions.HTTPError:
+            pass
+        
+        # Fall back to IMDSv1 if v2 didn't work
+        if instance_id is None:
+            try:
+                resp = http.request("GET", INSTANCE_ID_URL, retries=False)
+                if resp.status == 200:
+                    instance_id = resp.data.decode()
+            except urllib3.exceptions.HTTPError:
+                pass
+            
+        # Exit silently if both failed
+        if instance_id is None:
+            exit(1)
+
         sts = boto3.client("sts")
         iam = boto3.client("iam")
-
+        
         identity = sts.get_caller_identity()
         account_id = identity["Account"]
         arn = identity["Arn"]
