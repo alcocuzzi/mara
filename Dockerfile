@@ -4,17 +4,17 @@ ENV UID="10007"
 ENV GID="10007"
 ENV USER="mara"
 ENV GROUP="mara"
-ENV OS_TOOLS="wget curl git python3 python3-pip python-is-python3 sudo tar unzip less jq vim fish netcat-traditional nano cookiecutter zip ssh"
-ENV PY_TOOLS="configparser==7.2.0 urllib3==2.0.7 pre-commit==4.2.0 rich==13.7.1 boto3==1.38.36 botocore==1.38.36 PyGithub==2.6.1 pygit2==1.18.0 tabulate==0.9.0 poetry==2.2.1 ansible==12.0.0 typer==0.21.1 psycopg2-binary==2.9.12"
-ENV CLI_TOOLS="awscli, helm, tfsec, tflint, kubectl, terraform, k9s, ssm-session-manager github-cli"
+ENV OS_TOOLS="wget curl git python3 python3-pip python-is-python3 sudo tar unzip less jq vim fish netcat-traditional nano zip ssh"
+ENV PY_TOOLS="configparser==7.2.0 urllib3==2.0.7 pre-commit==4.2.0 rich==13.7.1 boto3==1.38.36 botocore==1.38.36 tabulate==0.9.0 ansible==12.0.0 typer==0.21.1"
+ENV CLI_TOOLS="awscli, helm, tfsec, tflint, kubectl, k9s, terraform, ssm-session-manager, github-cli"
 RUN apt-get update -y && \
     apt-get install ${OS_TOOLS} --no-install-recommends -y && \
     pip3 install --no-cache-dir ${PY_TOOLS} --break-system-packages && \
     apt clean && rm -rf /var/lib/apt/lists/*
 
 FROM base AS install
-ENV TF_VERSION="1.14.3"
-ENV GIT_CLI_VERSION="2.83.2"
+ENV TF_VERSION="1.15.8"
+ENV GIT_CLI_VERSION="2.97.0"
 WORKDIR /tmp
 RUN ARCH=$(uname -m) && \
     case "$ARCH" in x86_64) ARCH_SHORT=amd64; ARCH_SSM=64bit ;; aarch64) ARCH_SHORT=arm64; ARCH_SSM=arm64 ;; esac && \
