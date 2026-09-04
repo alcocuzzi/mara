@@ -62,11 +62,14 @@ jobs:
           command: | 
             docker buildx imagetools create \
             --tag $DOCKERHUB_USERNAME/mara:latest \
+            --tag "$DOCKERHUB_USERNAME/mara:$CIRCLE_TAG" \
             $DOCKERHUB_USERNAME/mara:amd64 \
             $DOCKERHUB_USERNAME/mara:arm64
       - run: 
           name: Show pushed multi-arch manifest
-          command: docker buildx imagetools inspect thecoderepublic/mara:latest
+          command: |
+            docker buildx imagetools inspect thecoderepublic/mara:latest
+            docker buildx imagetools inspect "$DOCKERHUB_USERNAME/mara:$CIRCLE_TAG"
   clean-tmp-tags:
     docker:
       - image: alpine/crane:latest
