@@ -13,7 +13,7 @@ RUN apt-get update -y && \
     apt clean && rm -rf /var/lib/apt/lists/*
 
 FROM base AS install
-ENV TF_VERSION="1.15.8"
+ENV TF_VERSION="1.14.9"
 ENV GIT_CLI_VERSION="2.97.0"
 WORKDIR /tmp
 RUN ARCH=$(uname -m) && \
