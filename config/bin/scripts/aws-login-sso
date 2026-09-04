@@ -188,7 +188,7 @@ def store_credentials(
 @app.command()
 def main(
     region: str = typer.Option(
-        "eu-west-1",
+        "us-west-2",
         "--region",
         "-r",
         help="Default AWS region for the credentials profile",
