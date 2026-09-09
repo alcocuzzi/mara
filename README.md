@@ -55,8 +55,8 @@ In order to create the wrapper script, please follow the below steps:
 ```console
 #!/bin/bash
 
-UID=$(id -u)
-GID=$(id -g)
+MY_UID=$(id -u)
+MY_GID=$(id -g)
 
 image=thecoderepublic/mara:latest
 docker pull ${image}
@@ -65,7 +65,7 @@ docker run \
    -it \
    --name=mara \
    --rm \
-   -u $UID:$GID \
+   -u $MY_UID:$MY_GID \
    -v ${HOME}:/home/mara/devbox \
    ${image}
 ```
@@ -74,8 +74,8 @@ docker run \
 ```console
 #!/bin/bash
 
-UID=$(id -u)
-GID=$(id -g)
+MY_UID=$(id -u)
+MY_GID=$(id -g)
 
 image=thecoderepublic/mara:latest
 podman pull ${image}
@@ -84,7 +84,7 @@ podman run \
    -it \
    --name=mara \
    --rm \
-   -u $UID:$GID \
+   -u $MY_UID:$MY_GID \
    -v ${HOME}:/home/mara/devbox \
    ${image}
 ```
@@ -93,8 +93,8 @@ podman run \
 ```console
 #!/bin/zsh
 
-UID=$(id -u)
-GID=$(id -g)
+MY_UID=$(id -u)
+MY_GID=$(id -g)
 
 mkdir -p ${HOME}/Documents/devbox
 image=thecoderepublic/mara:latest
@@ -103,18 +103,18 @@ container image pull --arch arm64 ${image}
 container run \
    -it \
    --rm \
-   -u $UID:$GID \
+   -u $MY_UID:$MY_GID \
    -w /home/mara/devbox \
    -v ${HOME}/Documents/devbox:/home/mara/devbox \
    ${image}
 ```
 
-- Make the mara file executable:
+- Make the mara file executable (You can save the file on different location):
 ```console
 chmod +x /usr/local/bin/mara
 ```
 
-- Every time you would like to use the tool, just type it:
+- Every time you would like to use the tool, just type it (If not saved on the above path, you have to create an alias to work like below):
 ```console
 mara
 ```
