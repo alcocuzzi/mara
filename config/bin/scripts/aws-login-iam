@@ -5,7 +5,7 @@ Mara utility to load AWS long credentials (Access Key and Secret Access Key).
 
 import typer
 import configparser
-from os import environ, path
+from os import environ
 from subprocess import run, check_output, CalledProcessError, DEVNULL
 from boto3 import client
 from botocore.exceptions import ClientError, ParamValidationError
