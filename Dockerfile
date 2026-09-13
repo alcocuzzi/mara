@@ -5,7 +5,7 @@ ENV GID="10007"
 ENV USER="mara"
 ENV GROUP="mara"
 ENV OS_TOOLS="wget curl git python3 python3-pip python-is-python3 sudo tar unzip less jq vim fish netcat-traditional nano zip ssh iproute2"
-ENV PY_TOOLS="configparser==7.2.0 urllib3==2.0.7 pre-commit==4.2.0 rich==13.7.1 boto3==1.38.36 botocore==1.38.36 tabulate==0.9.0 ansible==12.0.0 typer==0.21.1"
+ENV PY_TOOLS="configparser==7.2.0 urllib3==2.0.7 pre-commit==4.6.2 rich==15.0.0 boto3==1.43.90 botocore==1.43.90 tabulate==0.10.0 ansible==14.4.0 typer==0.27.2"
 ENV CLI_TOOLS="awscli, helm, tfsec, tflint, kubectl, k9s, terraform, ssm-session-manager, github-cli"
 RUN apt-get update -y && \
     apt-get install ${OS_TOOLS} --no-install-recommends -y && \
