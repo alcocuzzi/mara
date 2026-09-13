@@ -1,0 +1,174 @@
+#!/usr/bin/env python3
+"""
+Mara utility to configure GitHub credentials from a manually pasted Personal Access Token.
+"""
+
+from rich.console import Console
+import typer
+from os import environ
+from subprocess import run, CalledProcessError
+import json
+
+console = Console()
+app = typer.Typer(help="Mara utility to load a GitHub token and configure Git credentials.")
+
+MACHINE = "github.com"
+
+
+def get_token(debug: bool = False) -> str:
+    """Get the GitHub Personal Access Token from manual input."""
+    try:
+        token = input("Personal Access Token: ")
+    except KeyboardInterrupt:
+        typer.echo("\nOperation cancelled", err=True)
+        raise typer.Exit(0)
+
+    if debug:
+        typer.echo("✓ Token captured", err=True)
+
+    return token
+
+
+def get_github_user_info(token: str, debug: bool = False) -> tuple[str, str]:
+    """Fetch GitHub username and email using the GitHub CLI, falling back to manual entry."""
+    try:
+        if debug:
+            typer.echo("Attempting to fetch user info using GitHub CLI...", err=True)
+
+        # Set the token as environment variable for gh CLI
+        env = environ.copy()
+        env['GH_TOKEN'] = token
+
+        result = run(
+            ['gh', 'api', 'user'],
+            capture_output=True,
+            text=True,
+            env=env,
+            check=True
+        )
+
+        user_data = json.loads(result.stdout)
+        username = user_data.get('login', '')
+
+        # Get primary email
+        email_result = run(
+            ['gh', 'api', 'user/emails'],
+            capture_output=True,
+            text=True,
+            env=env,
+            check=True
+        )
+
+        emails = json.loads(email_result.stdout)
+        # Find primary email
+        email = next((e['email'] for e in emails if e.get('primary')), '')
+
+        if not email and emails:
+            email = emails[0]['email']  # Fallback to first email
+
+        if debug:
+            typer.echo(f"Fetched username: {username}", err=True)
+            typer.echo(f"Fetched email: {email}", err=True)
+
+        return username, email
+
+    except (CalledProcessError, FileNotFoundError, json.JSONDecodeError) as e:
+        if debug:
+            typer.echo(f"Could not fetch user info automatically: {str(e)}", err=True)
+
+        typer.secho("Could not automatically fetch user info. Please enter manually:",
+                   fg=typer.colors.YELLOW, err=True)
+
+        try:
+            username = input("Username: ")
+            email = input("Email: ")
+            return username, email
+        except KeyboardInterrupt:
+            typer.echo("\nOperation cancelled", err=True)
+            raise typer.Exit(0)
+
+
+def save_credentials(username: str, email: str, token: str, debug: bool = False):
+    """Save Git credentials to .netrc and .gitconfig files."""
+    home_dir = environ['HOME']
+
+    # Set fish environment variable for GH_TOKEN
+    try:
+        if debug:
+            typer.echo("Setting GH_TOKEN in fish shell", err=True)
+        run(f"set -Ux GH_TOKEN {token}", shell=True, executable="/usr/bin/fish", check=True)
+    except (CalledProcessError, FileNotFoundError):
+        if debug:
+            typer.echo("Fish shell not available, skipping environment variable", err=True)
+
+    # Write .netrc file
+    if debug:
+        typer.echo(f"Writing {home_dir}/.netrc", err=True)
+
+    with open(f"{home_dir}/.netrc", "w") as f:
+        f.write(f"machine {MACHINE}\n")
+        f.write(f"login {username}\n")
+        f.write(f"password {token}\n")
+
+    # Write .gitconfig file
+    if debug:
+        typer.echo(f"Writing {home_dir}/.gitconfig", err=True)
+
+    with open(f"{home_dir}/.gitconfig", "w") as f:
+        f.write("[user]\n")
+        f.write(f"        name = {username}\n")
+        f.write(f"        email = {email}\n")
+        f.write(f"        username = {username}")
+
+
+def load_credentials(debug: bool = False):
+    """Main logic to load GitHub credentials."""
+    token = get_token(debug)
+
+    if not token:
+        typer.secho("No token provided. Exiting.", fg=typer.colors.YELLOW, err=True)
+        raise typer.Exit(0)
+
+    # Automatically fetch user info using the token
+    console.print("\n[bold cyan]Fetching user information...[/bold cyan]")
+    username, email = get_github_user_info(token, debug)
+
+    if not username or not email:
+        typer.secho("Missing username or email", fg=typer.colors.YELLOW, err=True)
+
+    # Save credentials
+    save_credentials(username, email, token, debug)
+
+    # Success messages
+    console.print()
+    typer.secho("✓ Github configured successfully!", fg=typer.colors.GREEN, bold=True)
+    if username:
+        typer.secho(f"  Username: {username}", fg=typer.colors.GREEN)
+    if email:
+        typer.secho(f"  Email: {email}", fg=typer.colors.GREEN)
+    console.print("\n[bold cyan]💡 Tip:[/bold cyan] Run [bold]mara cheat-sheet -g[/bold] for useful git commands")
+
+
+@app.command()
+def main(
+    debug: bool = typer.Option(False, "--debug", help="Show more verbose logging"),
+):
+    """
+    Configure GitHub credentials using your Personal Access Token.
+
+    This utility will:
+    1. Ask for your Personal Access Token (pasted manually)
+    2. Automatically fetch your username and email using the token
+    3. Configure .netrc and .gitconfig files
+
+    Requirements:
+    - gh CLI installed (brew install gh)
+    """
+    if debug:
+        typer.echo("Debug mode enabled", err=True)
+
+    load_credentials(debug)
+
+
+if __name__ == "__main__":
+    app()

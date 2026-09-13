@@ -2,7 +2,6 @@
 """
 Mara utility to help you find the available Mara commands.
 """
-import sys
 import subprocess
 import typer
 

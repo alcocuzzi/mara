@@ -2,7 +2,6 @@
 """
 Mara utility to switch AWS regions.
 """
-from sys import exit
 from logging import getLogger, WARNING
 import typer
 import configparser
