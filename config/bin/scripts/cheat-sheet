@@ -168,7 +168,8 @@ vi_commands = {
         {"command": ":wq", "description": "Save and quit"},
         {"command": ":q!", "description": "Quit without saving"},
         {"command": "dd", "description": "Delete entire line"},
-        {"command": "d100d", "description": "Delete 100 lines"}
+        {"command": "d100d", "description": "Delete 100 lines"},
+        {"command": ":%d", "description": "Delete all lines in the file"},
     ],
     "Vi Visual Mode": [
         {"command": "v", "description": "Start character visual selection mode"},
@@ -236,6 +237,58 @@ linux_commands = {
     ],
 }
 
+terraform_commands = {
+    "Terraform Essential Commands": [
+        {"command": "terraform init", "description": "Initialize working directory, download providers/modules"},
+        {"command": "terraform plan", "description": "Show execution plan without applying changes"},
+        {"command": "terraform apply", "description": "Apply changes to reach desired state"},
+        {"command": "terraform apply -auto-approve", "description": "Apply without interactive approval"},
+        {"command": "terraform destroy", "description": "Destroy all managed infrastructure"},
+        {"command": "terraform validate", "description": "Check configuration syntax and internal consistency"},
+        {"command": "terraform fmt", "description": "Rewrite config files to canonical format/style"},
+        {"command": "terraform version", "description": "Show current Terraform and provider versions"},
+    ],
+
+    "Terraform State Management": [
+        {"command": "terraform state list", "description": "List resources tracked in state"},
+        {"command": "terraform state show <addr>", "description": "Show attributes of a resource in state"},
+        {"command": "terraform state mv <src> <dst>", "description": "Move/rename a resource within state"},
+        {"command": "terraform state rm <addr>", "description": "Remove a resource from state (without destroying it)"},
+        {"command": "terraform state pull", "description": "Download and output current state as JSON"},
+        {"command": "terraform state push", "description": "Upload a local state file to the backend"},
+        {"command": "terraform import <addr> <id>", "description": "Import existing infrastructure into state"},
+    ],
+
+    "Terraform Workspaces & Modules": [
+        {"command": "terraform workspace list", "description": "List all workspaces"},
+        {"command": "terraform workspace new <name>", "description": "Create and switch to a new workspace"},
+        {"command": "terraform workspace select <name>", "description": "Switch to an existing workspace"},
+        {"command": "terraform workspace show", "description": "Show current workspace name"},
+        {"command": "terraform get", "description": "Download and update modules referenced in config"},
+        {"command": "terraform init -upgrade", "description": "Reinstall and upgrade providers/modules to latest allowed versions"},
+    ],
+
+    "Terraform Plan & Apply Targeting": [
+        {"command": "terraform plan -out=plan.tfplan", "description": "Save plan to a file for later apply"},
+        {"command": "terraform apply plan.tfplan", "description": "Apply a previously saved plan file"},
+        {"command": "terraform plan -target=<addr>", "description": "Limit plan to a specific resource/module"},
+        {"command": "terraform apply -target=<addr>", "description": "Limit apply to a specific resource/module"},
+        {"command": "terraform apply -replace=<addr>", "description": "Force recreation of a specific resource"},
+        {"command": "terraform plan -var='key=value'", "description": "Pass a single variable value at runtime"},
+        {"command": "terraform plan -var-file='file.tfvars'", "description": "Pass variables from a file"},
+    ],
+
+    "Terraform Inspection & Debugging": [
+        {"command": "terraform show", "description": "Show human-readable output of state or plan file"},
+        {"command": "terraform show -json", "description": "Show state or plan as machine-readable JSON"},
+        {"command": "terraform output", "description": "Show all output values from state"},
+        {"command": "terraform output <name>", "description": "Show a specific output value"},
+        {"command": "terraform graph", "description": "Generate a visual dependency graph (DOT format)"},
+        {"command": "terraform console", "description": "Open interactive REPL to evaluate expressions"},
+        {"command": "TF_LOG=DEBUG terraform apply", "description": "Run with debug-level logging enabled"},
+    ],
+}
+
 
 def display_commands(data):
     for category, commands in data.items():
@@ -250,7 +303,9 @@ def main(
     ansible: bool = typer.Option(False, "--ansible", "-a", help="Show useful commands for ansible"),
     vi: bool = typer.Option(False, "--vi", "-v", help="Show useful vi commands"),
     linux: bool = typer.Option(False, "--linux", "-l", help="Show useful Linux system commands"),
+    tf: bool = typer.Option(False, "--tf", "-t", help="Show useful Terraform commands"),
     debug: bool = typer.Option(False, "--debug", help="Show more verbose logging"),
+    
 ):
     """
     Display useful cheat-sheet commands from useful tools.
@@ -275,6 +330,10 @@ def main(
         if debug:
             typer.echo("Showing Linux system commands...", err=True)
         display_commands(linux_commands)
+    if tf:
+        if debug:
+            typer.echo("Showing Terraform commands...", err=True)
+        display_commands(terraform_commands)
     if not any([git, ansible, vi, linux]):
         typer.secho("No option selected. Use --help to see available options.", fg=typer.colors.YELLOW)
 
