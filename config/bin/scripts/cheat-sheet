@@ -334,7 +334,7 @@ def main(
         if debug:
             typer.echo("Showing Terraform commands...", err=True)
         display_commands(terraform_commands)
-    if not any([git, ansible, vi, linux]):
+    if not any([git, ansible, vi, linux, tf]):
         typer.secho("No option selected. Use --help to see available options.", fg=typer.colors.YELLOW)
 
 
